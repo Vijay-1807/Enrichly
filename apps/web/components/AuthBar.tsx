@@ -9,15 +9,12 @@ export function AuthBar() {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
-  if (!email) return <a href="/login" className="btn-secondary px-3 py-1.5">Sign in</a>;
+  if (!email) return <a href="/login" className="btn-quiet px-3 py-1.5">Sign in</a>;
   return (
     <span className="flex items-center gap-2">
-      <span className="hidden max-w-[160px] truncate text-stone-500 md:inline" title={email}>{email}</span>
-      <span className="hidden h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-amber-200 to-orange-300 text-xs font-extrabold text-orange-900 sm:flex">
-        {email[0]?.toUpperCase()}
-      </span>
+      <span className="hidden max-w-[150px] truncate text-[13px] text-stone-500 xl:inline" title={email}>{email}</span>
       <button
-        className="btn-secondary px-3 py-1.5"
+        className="btn-quiet px-2.5 py-1.5 text-[13px]"
         onClick={() => {
           localStorage.removeItem('enrichly_token');
           localStorage.removeItem('enrichly_email');

@@ -1,17 +1,17 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { api, Job, statusColor } from '@/lib/api';
+import { api, Job } from '@/lib/api';
 import { useRequireAuth } from '@/components/AuthBar';
-import { Empty, ErrorBox, SkeletonRows, StatusBadge, timeAgo } from '@/components/ui';
+import { Empty, ErrorBox, ICONS, LineIcon, SectionLabel, SkeletonRows, StatusBadge, timeAgo } from '@/components/ui';
 
-const STAT_META: Record<string, { icon: string; accent: string; bar: string }> = {
-  'Total jobs': { icon: '📦', accent: 'from-amber-100 to-orange-100', bar: 'bg-amber-400' },
-  'Active': { icon: '🟢', accent: 'from-emerald-100 to-teal-100', bar: 'bg-emerald-400' },
-  'Running': { icon: '⚡', accent: 'from-sky-100 to-indigo-100', bar: 'bg-sky-400' },
-  'Failed (24h)': { icon: '🔥', accent: 'from-red-100 to-rose-100', bar: 'bg-red-400' },
-  'Success (24h)': { icon: '✨', accent: 'from-yellow-100 to-amber-200', bar: 'bg-amber-500' },
-};
+const STATS: { key: string; label: string; icon: string; dark?: boolean }[] = [
+  { key: 'totalJobs', label: 'Total jobs', icon: ICONS.box },
+  { key: 'activeJobs', label: 'Active', icon: ICONS.check },
+  { key: 'runningExecutions', label: 'Running', icon: ICONS.bolt, dark: true },
+  { key: 'failedLast24h', label: 'Failed · 24h', icon: ICONS.clock },
+  { key: 'successRate', label: 'Success · 24h', icon: ICONS.layers },
+];
 
 export default function Dashboard() {
   const ready = useRequireAuth();
@@ -55,132 +55,142 @@ export default function Dashboard() {
     finally { setRunning(null); }
   }
 
-  const cards: [string, string][] = [
-    ['Total jobs', stats?.totalJobs ?? '—'],
-    ['Active', stats?.activeJobs ?? '—'],
-    ['Running', stats?.runningExecutions ?? '—'],
-    ['Failed (24h)', stats?.failedLast24h ?? '—'],
-    ['Success (24h)', stats ? `${stats.successRateLast24h}%` : '—'],
-  ];
+  const val = (k: string) =>
+    k === 'successRate' ? (stats ? `${stats.successRateLast24h}%` : '—') : (stats?.[k] ?? '—');
 
   return (
-    <div className="space-y-6">
-      <div className="animate-enter flex flex-wrap items-end justify-between gap-3" style={{ ['--d' as any]: '0ms' }}>
-        <div>
-          <h1 className="bg-gradient-to-r from-orange-700 via-amber-700 to-orange-600 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-4xl">
-            Good day 👋
+    <div className="space-y-12">
+      {/* Hero */}
+      <section className="animate-enter space-y-3" style={{ ['--d' as any]: '0ms' }}>
+        <SectionLabel index="01" title="What we do" />
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <h1 className="h-display max-w-2xl text-[42px] sm:text-[56px]">
+            Everything your jobs need.<br />
+            <span className="h-muted">Nothing failing silently.</span>
           </h1>
-          <p className="mt-1 text-sm text-stone-500">Create jobs, trigger runs, and watch workers do the rest — failures included.</p>
+          <p className="max-w-xs pb-2 text-[15px] leading-relaxed text-stone-500">
+            One connected platform. From the first job to the next retry, every piece together.
+          </p>
         </div>
-        <Link href="/jobs/new" className="btn-primary">+ New job</Link>
-      </div>
+      </section>
 
       {err && <ErrorBox message={err} onRetry={() => { setLoading(true); load(); }} />}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        {cards.map(([k, v], i) => (
-          <div key={k} className="card card-hover animate-enter overflow-hidden !p-0" style={{ ['--d' as any]: `${60 + i * 70}ms` }}>
-            <div className={`h-1 w-full ${STAT_META[k]?.bar}`} />
-            <div className="p-4">
-              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-stone-400">
-                <span className={`flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br text-sm ${STAT_META[k]?.accent}`}>{STAT_META[k]?.icon}</span>
-                <span className="truncate">{k}</span>
-              </p>
+      {/* Stats */}
+      <section className="space-y-4">
+        <SectionLabel index="02" title="At a glance" />
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+          {STATS.map((s, i) => (
+            <div
+              key={s.key}
+              className={`animate-enter rounded-2xl p-5 transition-transform duration-300 hover:-translate-y-0.5 ${s.dark ? 'card-dark' : 'card card-hover'}`}
+              style={{ ['--d' as any]: `${60 + i * 60}ms` }}
+            >
+              <div className="flex items-start justify-between">
+                <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${s.dark ? 'bg-white/10 text-emerald-200' : 'bg-[#edf1e8] text-[#1d4a38]'}`}>
+                  <LineIcon d={s.icon} className="h-5 w-5" />
+                </span>
+                <span className={`text-[11px] ${s.dark ? 'text-white/40' : 'text-stone-300'}`}>0{i + 1}</span>
+              </div>
               {loading && !stats
-                ? <div className="skeleton mt-2 h-8 w-16" />
-                : <p className="mt-1 text-3xl font-extrabold tabular-nums text-stone-900">{String(v)}</p>}
+                ? <div className="skeleton mt-4 h-9 w-16" />
+                : <p className={`mt-4 text-[34px] font-semibold tabular-nums leading-none tracking-tight ${s.dark ? '' : ''}`}>{String(val(s.key))}</p>}
+              <p className={`mt-1.5 text-[11px] font-semibold uppercase ${s.dark ? 'text-white/50' : 'text-stone-400'}`} style={{ letterSpacing: '0.14em' }}>{s.label}</p>
             </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="card animate-enter !p-0 overflow-hidden" style={{ ['--d' as any]: '200ms' }}>
-        <div className="flex flex-col gap-2 border-b border-orange-100 bg-orange-50/50 p-4 sm:flex-row sm:items-center">
-          <input className="input sm:max-w-xs" placeholder="🔍 Search jobs…" value={search} onChange={e => setSearch(e.target.value)} />
-          <select className="input sm:max-w-[170px]" value={filter} onChange={e => setFilter(e.target.value)}>
-            <option value="">All statuses</option><option value="active">Active</option><option value="paused">Paused</option>
-          </select>
-          <span className="text-xs font-medium text-stone-400 sm:ml-auto">{total} job{total === 1 ? '' : 's'}</span>
+          ))}
         </div>
+      </section>
 
-        {loading ? <SkeletonRows n={3} />
-          : jobs.length === 0 ? (
-            <div className="p-4">
-              <Empty
-                title="No jobs yet"
-                hint="Create your first job — try the demo echo endpoint. It always returns 200."
-                action={<Link href="/jobs/new" className="btn-primary">Create your first job →</Link>}
-              />
+      {/* Jobs */}
+      <section className="animate-enter space-y-4" style={{ ['--d' as any]: '160ms' }}>
+        <SectionLabel index="03" title="Jobs" aside={<span className="text-xs text-stone-400">{total} total</span>} />
+        <div className="card !p-0 overflow-hidden">
+          <div className="flex flex-col gap-2 border-b p-4 sm:flex-row sm:items-center" style={{ borderColor: 'var(--line)' }}>
+            <div className="relative sm:max-w-xs sm:flex-1">
+              <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400">
+                <LineIcon d={ICONS.search} className="h-4 w-4" />
+              </span>
+              <input className="input !pl-10" placeholder="Search jobs…" value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-          ) : (
-            <>
-              {/* Mobile: cards */}
-              <div className="space-y-2 p-3 sm:hidden">
-                {jobs.map((j, i) => (
-                  <div key={j.id} className="card card-hover animate-enter !p-4" style={{ ['--d' as any]: `${i * 50}ms` }}>
-                    <div className="flex items-start justify-between gap-2">
-                      <Link href={`/jobs/${j.id}`} className="font-bold text-stone-900">{j.name}</Link>
-                      <StatusBadge status={j.lastStatus} />
-                    </div>
-                    <p className="mt-1 truncate font-mono text-[11px] text-stone-500">{j.method} {j.url}</p>
-                    <div className="mt-1 flex items-center gap-2 text-[11px] text-stone-400">
-                      <span>{j.scheduleMode === 'Interval' ? `⏱ every ${j.intervalSeconds}s` : '👆 manual'}</span>
-                      {!j.enabled && <span className="badge bg-stone-200 text-stone-600">paused</span>}
-                      <span className="ml-auto tabular-nums">{j.successRate != null ? `${j.successRate}%` : '—'} · {j.totalExecutions} runs</span>
-                    </div>
-                    <button disabled={running === j.id} onClick={() => runNow(j.id)} className="btn-secondary mt-3 w-full py-2 text-xs font-bold">
-                      {running === j.id ? 'Starting…' : '▶ Run now'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {/* Desktop: table */}
-              <div className="hidden overflow-x-auto sm:block">
-                <table className="w-full min-w-[760px] text-sm">
-                  <thead><tr className="table-head border-b border-orange-100 bg-orange-50/40">
-                    <th className="px-4 py-2.5">Job</th><th>Target</th><th>Schedule</th><th>Last result</th><th>Success</th><th></th>
-                  </tr></thead>
-                  <tbody>
-                    {jobs.map(j => (
-                      <tr key={j.id} className="row-hover border-b border-orange-50 last:border-0">
-                        <td className="px-4 py-3 pr-2">
-                          <Link href={`/jobs/${j.id}`} className="font-bold text-stone-900 hover:text-orange-700 hover:underline">{j.name}</Link>
-                          <div className="text-xs text-stone-400">last run {timeAgo(j.lastRunAt)}</div>
-                        </td>
-                        <td className="max-w-[260px] truncate pr-2 font-mono text-xs text-stone-500">{j.method} {j.url}</td>
-                        <td className="whitespace-nowrap pr-2 text-xs text-stone-600">
-                          {j.scheduleMode === 'Interval' ? <span>⏱ every {j.intervalSeconds}s</span> : <span>👆 manual</span>}
-                          {!j.enabled && <span className="ml-1 badge bg-stone-200 text-stone-600">paused</span>}
-                        </td>
-                        <td><StatusBadge status={j.lastStatus} /></td>
-                        <td className="whitespace-nowrap text-xs tabular-nums text-stone-600">{j.successRate != null ? `${j.successRate}%` : '—'} <span className="text-stone-400">({j.totalExecutions})</span></td>
-                        <td className="px-4 text-right">
-                          <button disabled={running === j.id} onClick={() => runNow(j.id)} className="btn-secondary px-3 py-1.5 text-xs font-bold">
-                            {running === j.id ? 'Starting…' : '▶ Run'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-      </div>
+            <select className="input sm:max-w-[180px]" value={filter} onChange={e => setFilter(e.target.value)}>
+              <option value="">All statuses</option><option value="active">Active</option><option value="paused">Paused</option>
+            </select>
+          </div>
 
+          {loading ? <SkeletonRows n={3} />
+            : jobs.length === 0 ? (
+              <div className="p-4">
+                <Empty
+                  title="No jobs yet"
+                  hint="Create your first job — the demo echo endpoint always returns 200."
+                  action={<Link href="/jobs/new" className="btn-primary">Create job <LineIcon d={ICONS.arrow} className="h-4 w-4" /></Link>}
+                />
+              </div>
+            ) : (
+              <>
+                {/* Mobile cards */}
+                <div className="divide-y sm:hidden" style={{ borderColor: 'var(--line)' }}>
+                  {jobs.map(j => (
+                    <div key={j.id} className="space-y-2 p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <Link href={`/jobs/${j.id}`} className="font-semibold leading-snug">{j.name}</Link>
+                        <StatusBadge status={j.lastStatus} />
+                      </div>
+                      <p className="truncate font-mono text-xs text-stone-400">{j.method} {j.url}</p>
+                      <div className="flex items-center gap-2">
+                        <button disabled={running === j.id} onClick={() => runNow(j.id)} className="btn-outline flex-1 py-2 text-[13px]">
+                          <LineIcon d={ICONS.play} className="h-3.5 w-3.5" /> {running === j.id ? 'Starting…' : 'Run'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Desktop rows */}
+                <div className="hidden sm:block">
+                  <div className="eyebrow grid grid-cols-[1.4fr_1.6fr_0.8fr_0.8fr_0.6fr_0.4fr] gap-4 border-b px-5 py-3" style={{ borderColor: 'var(--line)' }}>
+                    <span>Job</span><span>Target</span><span>Schedule</span><span>Last result</span><span>Success</span><span />
+                  </div>
+                  {jobs.map(j => (
+                    <div key={j.id} className="row-hover grid grid-cols-[1.4fr_1.6fr_0.8fr_0.8fr_0.6fr_0.4fr] items-center gap-4 border-b px-5 py-4 last:border-0" style={{ borderColor: '#f0ede2' }}>
+                      <div className="min-w-0">
+                        <Link href={`/jobs/${j.id}`} className="block truncate font-semibold hover:underline">{j.name}</Link>
+                        <span className="text-xs text-stone-400">last run {timeAgo(j.lastRunAt)}</span>
+                      </div>
+                      <span className="truncate font-mono text-[13px] text-stone-500">{j.method} {j.url}</span>
+                      <span className="whitespace-nowrap text-[13px] text-stone-500">
+                        {j.scheduleMode === 'Interval' ? `every ${j.intervalSeconds}s` : 'manual'}
+                        {!j.enabled && ' · paused'}
+                      </span>
+                      <span><StatusBadge status={j.lastStatus} /></span>
+                      <span className="text-[13px] tabular-nums text-stone-500">{j.successRate != null ? `${j.successRate}%` : '—'} <span className="text-stone-300">({j.totalExecutions})</span></span>
+                      <span className="text-right">
+                        <button disabled={running === j.id} onClick={() => runNow(j.id)} className="btn-outline px-3.5 py-1.5 text-[13px]">
+                          <LineIcon d={ICONS.play} className="h-3.5 w-3.5" /> {running === j.id ? '…' : 'Run'}
+                        </button>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+        </div>
+      </section>
+
+      {/* Recent */}
       {stats?.recentExecutions?.length > 0 && (
-        <div className="card animate-enter" style={{ ['--d' as any]: '280ms' }}>
-          <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-stone-400">🕘 Recent executions</h2>
-          <div className="space-y-1.5 text-sm">
+        <section className="animate-enter space-y-4" style={{ ['--d' as any]: '220ms' }}>
+          <SectionLabel index="04" title="Recent runs" />
+          <div className="space-y-2">
             {stats.recentExecutions.map((e: any) => (
-              <Link key={e.id} href={`/executions/${e.id}`} className="row-hover flex flex-wrap items-center gap-2 rounded-xl px-2 py-1.5">
-                <span className={`badge ${statusColor(e.status)}`}>{e.status}</span>
-                <span className="font-semibold text-stone-800">{e.jobName}</span>
-                <span className="text-xs text-stone-400">attempt {e.attempt} · {timeAgo(e.createdAt)}</span>
+              <Link key={e.id} href={`/executions/${e.id}`} className="card card-hover flex flex-wrap items-center gap-3 !rounded-xl px-4 py-3">
+                <StatusBadge status={e.status} />
+                <span className="font-semibold">{e.jobName}</span>
+                <span className="text-[13px] text-stone-400">attempt {e.attempt} · {timeAgo(e.createdAt)}</span>
+                <LineIcon d={ICONS.arrow} className="ml-auto h-4 w-4 text-stone-300" />
               </Link>
             ))}
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

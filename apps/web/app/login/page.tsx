@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { ICONS, LineIcon } from '@/components/ui';
 
 export default function Login() {
   const [email, setEmail] = useState('demo@enrichly.dev');
@@ -21,24 +22,26 @@ export default function Login() {
   }
 
   return (
-    <div className="mx-auto grid max-w-3xl items-stretch gap-4 sm:grid-cols-2">
-      <div className="animate-enter hidden flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-orange-700 p-6 text-white shadow-lg sm:flex" style={{ ['--d' as any]: '0ms' }}>
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 text-2xl backdrop-blur">⚙️</span>
+    <div className="mx-auto grid max-w-4xl items-stretch gap-5">
+      <div className="card-dark animate-enter hidden flex-col justify-between p-8 sm:flex" style={{ ['--d' as any]: '0ms' }}>
+        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10">
+          <LineIcon d={ICONS.layers} className="h-5 w-5 text-emerald-200" />
+        </span>
         <div>
-          <p className="text-2xl font-extrabold leading-tight">Automate the boring. Observe everything.</p>
-          <p className="mt-2 text-sm text-orange-100">Jobs, workers, retries and full execution history — in one warm place.</p>
+          <p className="h-display text-[34px] text-white">Automate the boring.<br /><span className="text-white/50">Observe everything.</span></p>
+          <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-white/60">Jobs, workers, retries and full execution history — in one connected platform.</p>
         </div>
-        <p className="text-xs text-orange-200">Enrichly HR · Job Automation</p>
+        <p className="eyebrow !text-white/40">enrichly · job automation</p>
       </div>
-      <div className="animate-enter" style={{ ['--d' as any]: '100ms' }}>
-        <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-stone-900">Welcome back</h1>
-        <p className="mb-4 text-sm text-stone-500">Sign in to your automation workspace.</p>
-        <form onSubmit={submit} className="card space-y-3">
-          {err && <p className="animate-pop rounded-xl border border-red-200 bg-red-50 p-2.5 text-sm text-red-800">{err}</p>}
+      <div className="animate-enter" style={{ ['--d' as any]: '80ms' }}>
+        <h1 className="h-display text-4xl">Welcome back</h1>
+        <p className="mt-2 text-[15px] text-stone-500">Sign in to your automation workspace.</p>
+        <form onSubmit={submit} className="card mt-6 space-y-4 p-5 sm:p-6">
+          {err && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{err}</p>}
           <div><label className="label">Email</label><input className="input" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" /></div>
           <div><label className="label">Password</label><input className="input" type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" /></div>
-          <button className="btn-primary w-full py-2.5" disabled={busy}>{busy ? 'Signing in…' : 'Sign in →'}</button>
-          <p className="text-center text-sm text-stone-500">No account? <Link href="/register" className="link-warm font-semibold">Register</Link></p>
+          <button className="btn-primary w-full py-3" disabled={busy}>{busy ? 'Signing in…' : <>Sign in <LineIcon d={ICONS.arrow} className="h-4 w-4" /></>}</button>
+          <p className="text-center text-sm text-stone-500">No account? <Link href="/register" className="font-semibold text-[#1d4a38] underline underline-offset-4">Register</Link></p>
         </form>
       </div>
     </div>
