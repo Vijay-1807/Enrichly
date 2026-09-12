@@ -17,6 +17,9 @@ so multiple workers can run with zero extra infrastructure.
 - Workers: competing consumers, atomic claim, exponential-backoff retries, stale-worker recovery
 - Execution history: status, attempts, HTTP status, durations, error messages, logs
 - Retry failed/cancelled (creates a linked execution), cancel queued/running
+- Webhook notifications: per-job URL + None/Failed/Success/All, delivery logged on the execution
+- Worker health: live heartbeat table + `GET /api/workers/health` + dashboard Workers section
+- Realtime: SignalR `executionUpdated` pushes (instant UI refresh, HTTP polling stays as fallback)
 - Dashboard stats + search/filter + auto-refresh while jobs run
 - Demo endpoints (`/api/demo/echo|flaky|fail|slow`) so reviewers need no external APIs
 - Health endpoint, Swagger in dev, structured logs with job/execution/worker IDs
@@ -138,8 +141,16 @@ GET  /api/jobs/{id}/executions?status=&page=
 GET  /api/executions/{id}            (attempts + logs)
 POST /api/executions/{id}/retry      POST /api/executions/{id}/cancel
 GET  /api/dashboard/stats
+GET  /api/workers/health
+WS   /hubs/executions (SignalR: WatchExecution, executionUpdated events)
 GET  /api/demo/echo|flaky|fail|slow?ms=
 ```
+
+## Deployment (Render + Vercel)
+
+Full step-by-step with every env var: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+Short version: Render Blueprint (`render.yaml`) for API + Postgres, Vercel project
+(root `apps/web`) for the frontend with `NEXT_PUBLIC_API_URL`.
 
 ## Known limitations
 

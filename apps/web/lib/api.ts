@@ -6,6 +6,7 @@ export type Job = {
   url: string; method: string; headersJson?: string | null; body?: string | null;
   scheduleMode: string; intervalSeconds?: number | null; enabled: boolean;
   maxRetries: number; timeoutSeconds: number;
+  notificationUrl?: string | null; notifyOn: string;
   lastRunAt?: string | null; nextRunAt?: string | null;
   createdAt: string; updatedAt: string; rowVersion?: string | null;
   lastStatus?: string | null; totalExecutions: number; failedExecutions: number;
@@ -68,9 +69,15 @@ export const api = {
     return req<{ items: ExecutionSummary[]; total: number }>(`/api/jobs/${id}/executions?${q}`);
   },
   getExecution: (id: string) => req<ExecutionDetail>(`/api/executions/${id}`),
+  workersHealth: () => req<{ livenessWindowSeconds: number; workers: WorkerHealth[] }>('/api/workers/health'),
   retryExecution: (id: string) => req<{ executionId: string }>(`/api/executions/${id}/retry`, { method: 'POST' }),
   cancelExecution: (id: string) => req<{ status: string }>(`/api/executions/${id}/cancel`, { method: 'POST' }),
   health: () => req<any>('/api/health'),
+};
+
+export type WorkerHealth = {
+  workerId: string; alive: boolean; startedAt: string; lastSeenAt: string;
+  secondsSinceSeen: number; version: string; processedCount: number;
 };
 
 export function statusColor(s?: string | null) {

@@ -55,7 +55,7 @@ export default function JobDetail({ params }: { params: Promise<{ id: string }> 
     ['Schedule', job.scheduleMode === 'Interval' ? `every ${job.intervalSeconds}s` : 'manual'],
     ['Next run', timeAgo(job.nextRunAt)],
     ['Success rate', job.successRate != null ? `${job.successRate}%` : '—'],
-    ['Runs', `${job.totalExecutions} · ${job.failedExecutions} failed`],
+    ['Notify', job.notifyOn && job.notifyOn !== 'None' ? `${job.notifyOn} → ${job.notificationUrl}` : 'off'],
   ];
 
   return (
@@ -97,6 +97,7 @@ export default function JobDetail({ params }: { params: Promise<{ id: string }> 
               headersJson: job.headersJson || '', body: job.body || '',
               scheduleMode: job.scheduleMode, intervalSeconds: String(job.intervalSeconds || 3600),
               enabled: job.enabled, maxRetries: String(job.maxRetries), timeoutSeconds: String(job.timeoutSeconds),
+              notificationUrl: job.notificationUrl || '', notifyOn: job.notifyOn || 'None',
               rowVersion: job.rowVersion,
             } as any}
             onSubmit={async (p) => {

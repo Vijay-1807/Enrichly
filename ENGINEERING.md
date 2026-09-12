@@ -98,6 +98,33 @@ Next.js (browser) ──HTTPS──▶ ASP.NET Core API ──EF Core──▶ P
 per-key isolation, user isolation mirroring controller scoping, retry linkage, cancel semantics),
 `ConcurrencyTests` (two workers, one row, one winner — real Postgres when available).
 
+## 8b. Notifications (PDF: "Notifications")
+
+Per-job webhook: `NotificationUrl` + `NotifyOn` (None/Failed/Success/All, validated).
+On terminal `Success`/`Failed`, the worker POSTs
+`{event, jobId, jobName, executionId, status, attempt, trigger, responseStatus, durationMs, error, at}`
+with a 10s timeout. Delivery success/failure is appended to the execution's `job_logs`,
+and a failed delivery never changes the execution outcome. Chose webhooks over email —
+zero external dependencies (no SMTP), testable with our own `/api/demo/echo`.
+
+## 8c. Worker health (PDF: "System / worker health")
+
+`worker_heartbeats(worker_id PK, started_at, last_seen_at, version, processed_count)`.
+Every worker upserts each loop, prunes rows unseen 10+ min, deletes its row on graceful stop.
+`GET /api/workers/health` marks alive within `LivenessWindowSeconds` (60s) with
+seconds-since-seen + processed counts; the dashboard renders a Workers section.
+Stale-crash detection for *executions* (120s heartbeat timeout + requeue) is unchanged.
+
+## 8d. Realtime (PDF: "Real-time execution updates")
+
+SignalR hub at `/hubs/executions` (JWT via `?access_token`, required for WebSockets).
+Workers broadcast `executionUpdated {executionId, jobId, status, attempt}` to the owner's
+`user:{id}` group + the `execution:{id}` group. The UI subscribes (`lib/realtime.ts`,
+one shared connection, auto-reconnect) and reloads instantly — with HTTP polling kept as
+the fallback, so correctness never depends on the socket. Verified with a Node SignalR
+client: event arrived ~1s after Run. Known limit: multi-instance needs a Redis backplane;
+single-instance (Render starter, docker compose) is fully live.
+
 ## 8. Known limitations
 
 - Polling (2s worker, 15s scheduler, 5s UI) — higher latency/fewer guarantees than push queues.
@@ -105,7 +132,7 @@ per-key isolation, user isolation mirroring controller scoping, retry linkage, c
 - Job header secrets stored plaintext; no per-job auth vault, no secret rotation.
 - Single HTTP executor; no payload templating, no response-condition success rules.
 - Logs capped (200/execution), bodies truncated (4KB/attempt, 2KB in API) — by design.
-- No websockets/SSE, no email/Slack notifications, no worker-health dashboard.
+- No email/Slack channels (webhooks only); SignalR without Redis backplane is single-instance-live (polling fallback everywhere).
 
 ## 9. What I'd do with more time
 

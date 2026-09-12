@@ -83,6 +83,8 @@ public class JobsController : ControllerBase
             Enabled = req.Enabled,
             MaxRetries = req.MaxRetries,
             TimeoutSeconds = req.TimeoutSeconds,
+            NotificationUrl = string.IsNullOrWhiteSpace(req.NotificationUrl) ? null : req.NotificationUrl.Trim(),
+            NotifyOn = JobValidator.NormalizeNotifyOn(req.NotifyOn),
             NextRunAt = mode == ScheduleMode.Interval ? DateTime.UtcNow + TimeSpan.FromSeconds(req.IntervalSeconds ?? 3600) : null,
         };
         _db.Jobs.Add(job);
@@ -135,6 +137,8 @@ public class JobsController : ControllerBase
         job.Enabled = req.Enabled;
         job.MaxRetries = req.MaxRetries;
         job.TimeoutSeconds = req.TimeoutSeconds;
+        job.NotificationUrl = string.IsNullOrWhiteSpace(req.NotificationUrl) ? null : req.NotificationUrl.Trim();
+        job.NotifyOn = JobValidator.NormalizeNotifyOn(req.NotifyOn);
         job.UpdatedAt = DateTime.UtcNow;
         if (mode == ScheduleMode.Interval && job.NextRunAt is null)
             job.NextRunAt = DateTime.UtcNow + TimeSpan.FromSeconds(job.IntervalSeconds ?? 3600);
@@ -193,6 +197,7 @@ public class JobsController : ControllerBase
         var rv = Convert.ToBase64String(BitConverter.GetBytes(j.RowVersion));
         return new(j.Id, j.Name, j.Description, j.Type, j.Url, j.Method, j.HeadersJson, j.Body,
             j.ScheduleMode.ToString(), j.IntervalSeconds, j.Enabled, j.MaxRetries, j.TimeoutSeconds,
+            j.NotificationUrl, j.NotifyOn,
             j.LastRunAt, j.NextRunAt, j.CreatedAt, j.UpdatedAt, rv, last, total, failed, rate);
     }
 }

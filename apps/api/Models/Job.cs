@@ -49,6 +49,14 @@ public class Job
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>Optional webhook notified on terminal state (POST JSON). Null = no notification.</summary>
+    [MaxLength(2000)]
+    public string? NotificationUrl { get; set; }
+
+    /// <summary>None (default), Failed, Success, All.</summary>
+    [MaxLength(10)]
+    public string NotifyOn { get; set; } = "None";
+
     /// <summary>Optimistic concurrency token (maps to Postgres xmin).</summary>
     [Timestamp]
     public uint RowVersion { get; set; }

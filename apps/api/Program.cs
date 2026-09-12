@@ -56,8 +56,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
             ClockSkew = TimeSpan.FromMinutes(2),
         };
+        // SignalR browser clients send the JWT as ?access_token (WebSockets can't set headers).
+        o.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = ctx =>
+            {
+                var token = ctx.Request.Query["access_token"].FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(token) && ctx.Request.Path.StartsWithSegments("/hubs"))
+                    ctx.Token = token;
+                return Task.CompletedTask;
+            }
+        };
     });
 builder.Services.AddAuthorization();
+builder.Services.AddSignalR();
 
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.WithOrigins(frontendUrl.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -67,6 +79,7 @@ builder.Services.AddHttpClient("job-runner");
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<ExecutionService>();
 builder.Services.AddScoped<HttpJobExecutor>();
+builder.Services.AddScoped<NotificationService>();
 builder.Services.AddHostedService<JobWorker>();
 builder.Services.AddHostedService<JobScheduler>();
 
@@ -126,6 +139,7 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<Api.Hubs.ExecutionHub>("/hubs/executions");
 
 app.Run();
 

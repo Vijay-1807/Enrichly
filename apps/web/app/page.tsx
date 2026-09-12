@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { api, Job } from '@/lib/api';
+import { api, Job, WorkerHealth } from '@/lib/api';
+import { useLiveUpdates } from '@/lib/realtime';
 import { useRequireAuth } from '@/components/AuthBar';
 import { Empty, ErrorBox, ICONS, LineIcon, SectionLabel, SkeletonRows, StatusBadge, timeAgo } from '@/components/ui';
 
@@ -23,18 +24,22 @@ export default function Dashboard() {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState<string | null>(null);
+  const [workers, setWorkers] = useState<WorkerHealth[]>([]);
 
   async function load() {
     setErr(null);
     try {
-      const [s, j] = await Promise.all([
+      const [s, j, w] = await Promise.all([
         api.stats(),
         api.listJobs({ page: 1, pageSize: 50, ...(search ? { search } : {}), ...(filter ? { status: filter } : {}) }),
+        api.workersHealth().catch(() => ({ workers: [] as WorkerHealth[], livenessWindowSeconds: 60 })),
       ]);
-      setStats(s); setJobs(j.items); setTotal(j.total);
+      setStats(s); setJobs(j.items); setTotal(j.total); setWorkers(w.workers);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
   }
+
+  const live = useLiveUpdates(() => { if (!document.hidden) load(); });
 
   useEffect(() => { if (ready) { setLoading(true); load(); } }, [ready]);
   useEffect(() => { if (!ready) return; const t = setTimeout(load, 400); return () => clearTimeout(t); }, [search, filter]);
@@ -70,6 +75,7 @@ export default function Dashboard() {
           </h1>
           <p className="max-w-xs pb-2 text-[15px] leading-relaxed text-stone-500">
             One connected platform. From the first job to the next retry, every piece together.
+            {live && <span className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-emerald-700"><span className="dot bg-emerald-600 text-emerald-600 dot-live" /> realtime on</span>}
           </p>
         </div>
       </section>
@@ -101,9 +107,37 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {/* Workers */}
+      <section className="animate-enter space-y-4" style={{ ['--d' as any]: '140ms' }}>
+        <SectionLabel index="03" title="Workers" aside={<span className="text-xs text-stone-400">{workers.filter(w => w.alive).length} alive</span>} />
+        {workers.length === 0
+          ? <p className="text-sm text-stone-400">{loading ? 'Checking workers…' : 'No workers reporting yet.'}</p>
+          : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {workers.map((w, i) => (
+                <div key={w.workerId} className="card card-hover animate-enter p-4" style={{ ['--d' as any]: `${i * 60}ms` }}>
+                  <div className="flex items-center gap-2">
+                    <span className={`dot ${w.alive ? 'bg-emerald-600 text-emerald-600 dot-live' : 'bg-stone-300 text-stone-300'}`} />
+                    <span className="truncate font-mono text-[13px] font-semibold" title={w.workerId}>
+                      {w.workerId.split(':')[0]}:{w.workerId.split(':')[1]?.slice(0, 6)}
+                    </span>
+                    <span className={`ml-auto text-[11px] font-bold uppercase tracking-wide ${w.alive ? 'text-emerald-700' : 'text-stone-400'}`}>
+                      {w.alive ? 'alive' : 'stale'}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-4 text-xs tabular-nums text-stone-500">
+                    <span>{w.processedCount} done</span>
+                    <span className="ml-auto">seen {w.secondsSinceSeen}s ago</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+      </section>
+
       {/* Jobs */}
-      <section className="animate-enter space-y-4" style={{ ['--d' as any]: '160ms' }}>
-        <SectionLabel index="03" title="Jobs" aside={<span className="text-xs text-stone-400">{total} total</span>} />
+      <section className="animate-enter space-y-4" style={{ ['--d' as any]: '180ms' }}>
+        <SectionLabel index="04" title="Jobs" aside={<span className="text-xs text-stone-400">{total} total</span>} />
         <div className="card !p-0 overflow-hidden">
           <div className="flex flex-col gap-2 border-b p-4 sm:flex-row sm:items-center" style={{ borderColor: 'var(--line)' }}>
             <div className="relative sm:max-w-xs sm:flex-1">
@@ -179,7 +213,7 @@ export default function Dashboard() {
       {/* Recent */}
       {stats?.recentExecutions?.length > 0 && (
         <section className="animate-enter space-y-4" style={{ ['--d' as any]: '220ms' }}>
-          <SectionLabel index="04" title="Recent runs" />
+          <SectionLabel index="05" title="Recent runs" />
           <div className="space-y-2">
             {stats.recentExecutions.map((e: any) => (
               <Link key={e.id} href={`/executions/${e.id}`} className="card card-hover flex flex-wrap items-center gap-3 !rounded-xl px-4 py-3">

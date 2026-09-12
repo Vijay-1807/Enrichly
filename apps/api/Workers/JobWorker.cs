@@ -1,6 +1,8 @@
 using Api.Data;
+using Api.Hubs;
 using Api.Models;
 using Api.Services;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Workers;
@@ -39,6 +41,7 @@ public class JobWorker : BackgroundService
         {
             try
             {
+                await HeartbeatAsync(stoppingToken);
                 await RecoverStaleAsync(stoppingToken);
                 var claimedId = await TryClaimOneAsync(stoppingToken);
                 if (claimedId is null)
@@ -55,7 +58,43 @@ public class JobWorker : BackgroundService
                 await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken).ContinueWith(_ => { });
             }
         }
+        await UnregisterAsync();
         _log.LogInformation("Worker {WorkerId} stopped", _workerId);
+    }
+
+    /// <summary>Upsert this worker's liveness row; prune rows unseen for 10+ minutes.</summary>
+    private async Task HeartbeatAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var scope = _sp.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var row = await db.WorkerHeartbeats.FindAsync(new object[] { _workerId }, ct);
+            if (row is null)
+            {
+                db.WorkerHeartbeats.Add(new WorkerHeartbeat { WorkerId = _workerId, StartedAt = DateTime.UtcNow, LastSeenAt = DateTime.UtcNow });
+            }
+            else row.LastSeenAt = DateTime.UtcNow;
+            var cutoff = DateTime.UtcNow - TimeSpan.FromMinutes(10);
+            await db.WorkerHeartbeats.Where(w => w.LastSeenAt < cutoff).ExecuteDeleteAsync(ct);
+            await db.SaveChangesAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _log.LogDebug(ex, "Worker {WorkerId}: heartbeat write failed (non-fatal)", _workerId);
+        }
+    }
+
+    private async Task UnregisterAsync()
+    {
+        try
+        {
+            using var scope = _sp.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.WorkerHeartbeats.Where(w => w.WorkerId == _workerId).ExecuteDeleteAsync();
+            await db.SaveChangesAsync();
+        }
+        catch { /* shutting down; best effort */ }
     }
 
     private async Task RecoverStaleAsync(CancellationToken ct)
@@ -159,6 +198,7 @@ public class JobWorker : BackgroundService
             attempt.ErrorMessage = "Cancelled by user during run.";
             db.JobLogs.Add(new JobLog { ExecutionId = exec.Id, Level = "warn", Message = "Run finished after cancel; keeping Cancelled." });
             await db.SaveChangesAsync(ct);
+            await BroadcastAsync(exec, ct);
             return;
         }
 
@@ -221,5 +261,61 @@ public class JobWorker : BackgroundService
             }
         }
         await db.SaveChangesAsync(ct);
+
+        // Processed-count for the health UI (separate save so execution finality is never blocked).
+        try
+        {
+            var hb = await db.WorkerHeartbeats.FindAsync(new object[] { _workerId }, ct);
+            if (hb is not null) { hb.ProcessedCount++; await db.SaveChangesAsync(ct); }
+        }
+        catch (Exception ex) { _log.LogDebug(ex, "Processed-count bump failed (non-fatal)"); }
+
+        await BroadcastAsync(exec, ct);
+
+        // Webhook notification on terminal state (never fails the execution).
+        if (exec.Status is ExecutionStatus.Success or ExecutionStatus.Failed
+            && NotificationService.ShouldNotify(job, exec.Status))
+        {
+            await NotifyAsync(db, job, exec, ct);
+        }
+    }
+
+    private async Task BroadcastAsync(Execution exec, CancellationToken ct)
+    {
+        try
+        {
+            using var scope = _sp.CreateScope();
+            var hub = scope.ServiceProvider.GetRequiredService<IHubContext<ExecutionHub>>();
+            var payload = ExecutionHubEvents.Payload(exec.Id, exec.JobId, exec.Status.ToString(), exec.Attempt);
+            var userId = exec.Job?.UserId;
+            if (userId.HasValue)
+                await hub.Clients.Group(ExecutionHubEvents.UserGroup(userId.Value)).SendAsync("executionUpdated", payload, ct);
+            await hub.Clients.Group($"execution:{exec.Id}").SendAsync("executionUpdated", payload, ct);
+        }
+        catch (Exception ex)
+        {
+            _log.LogDebug(ex, "Broadcast failed for execution {Exec} (non-fatal)", exec.Id);
+        }
+    }
+
+    private async Task NotifyAsync(AppDbContext db, Job job, Execution exec, CancellationToken ct)
+    {
+        try
+        {
+            using var scope = _sp.CreateScope();
+            var notifier = scope.ServiceProvider.GetRequiredService<NotificationService>();
+            var (ok, error) = await notifier.SendAsync(job, exec, ct);
+            db.JobLogs.Add(new JobLog
+            {
+                ExecutionId = exec.Id,
+                Level = ok ? "info" : "warn",
+                Message = ok ? $"Notification delivered to {job.NotificationUrl}." : $"Notification failed: {error}",
+            });
+            await db.SaveChangesAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Notify step failed for execution {Exec} (non-fatal)", exec.Id);
+        }
     }
 }

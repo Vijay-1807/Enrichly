@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Execution> Executions => Set<Execution>();
     public DbSet<ExecutionAttempt> ExecutionAttempts => Set<ExecutionAttempt>();
     public DbSet<JobLog> JobLogs => Set<JobLog>();
+    public DbSet<WorkerHeartbeat> WorkerHeartbeats => Set<WorkerHeartbeat>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -65,6 +66,13 @@ public class AppDbContext : DbContext
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.ExecutionId, x.CreatedAt });
             e.HasOne(x => x.Execution).WithMany(x => x.Logs).HasForeignKey(x => x.ExecutionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<WorkerHeartbeat>(e =>
+        {
+            e.ToTable("worker_heartbeats");
+            e.HasKey(x => x.WorkerId);
+            e.HasIndex(x => x.LastSeenAt);
         });
     }
 }

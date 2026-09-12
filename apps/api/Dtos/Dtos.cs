@@ -26,7 +26,9 @@ public record CreateJobRequest(
     int? IntervalSeconds,
     bool Enabled,
     [Range(0, 10)] int MaxRetries,
-    [Range(2, 120)] int TimeoutSeconds);
+    [Range(2, 120)] int TimeoutSeconds,
+    string? NotificationUrl,
+    string NotifyOn);
 
 public record UpdateJobRequest(
     [Required, MaxLength(200)] string Name,
@@ -40,12 +42,15 @@ public record UpdateJobRequest(
     bool Enabled,
     [Range(0, 10)] int MaxRetries,
     [Range(2, 120)] int TimeoutSeconds,
-    string? RowVersion);
+    string? RowVersion,
+    string? NotificationUrl,
+    string NotifyOn);
 
 public record JobResponse(
     Guid Id, string Name, string? Description, string Type, string Url, string Method,
     string? HeadersJson, string? Body, string ScheduleMode, int? IntervalSeconds,
     bool Enabled, int MaxRetries, int TimeoutSeconds,
+    string? NotificationUrl, string NotifyOn,
     DateTime? LastRunAt, DateTime? NextRunAt,
     DateTime CreatedAt, DateTime UpdatedAt, string? RowVersion,
     ExecutionStatus? LastStatus, int TotalExecutions, int FailedExecutions, double? SuccessRate);

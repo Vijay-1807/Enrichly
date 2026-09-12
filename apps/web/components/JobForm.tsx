@@ -5,6 +5,7 @@ export type JobFormValues = {
   name: string; description: string; url: string; method: string;
   headersJson: string; body: string; scheduleMode: string;
   intervalSeconds: string; enabled: boolean; maxRetries: string; timeoutSeconds: string;
+  notificationUrl: string; notifyOn: string;
 };
 
 const DEMOS = [
@@ -26,6 +27,7 @@ export function JobForm({ initial, submitLabel, onSubmit }: {
     intervalSeconds: initial?.intervalSeconds || '3600',
     enabled: initial?.enabled ?? true,
     maxRetries: initial?.maxRetries || '3', timeoutSeconds: initial?.timeoutSeconds || '30',
+    notificationUrl: initial?.notificationUrl || '', notifyOn: initial?.notifyOn || 'None',
   });
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -42,6 +44,7 @@ export function JobForm({ initial, submitLabel, onSubmit }: {
         scheduleMode: v.scheduleMode,
         intervalSeconds: v.scheduleMode === 'Interval' ? Number(v.intervalSeconds) : null,
         enabled: v.enabled, maxRetries: Number(v.maxRetries), timeoutSeconds: Number(v.timeoutSeconds),
+        notificationUrl: v.notificationUrl || null, notifyOn: v.notifyOn,
         ...(initial as any),
       });
     } catch (e: any) { setErr(e.message); }
@@ -135,6 +138,25 @@ export function JobForm({ initial, submitLabel, onSubmit }: {
           </span>
           {v.enabled ? 'Enabled — runs on schedule' : 'Paused — manual runs only'}
         </button>
+      </fieldset>
+
+      <fieldset className="space-y-4 border-t pt-6" style={{ borderColor: 'var(--line)' }}>
+        <legend className="eyebrow mb-1">Notifications</legend>
+        <div className="grid gap-4 sm:grid-cols-[170px_1fr]">
+          <div>
+            <label className="label">Notify on</label>
+            <select className="input" value={v.notifyOn} onChange={set('notifyOn')}>
+              <option>None</option><option>Failed</option><option>Success</option><option>All</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Webhook URL · POST JSON</label>
+            <input
+              className="input font-mono !text-[13px]" value={v.notificationUrl} onChange={set('notificationUrl')}
+              placeholder="https://hooks.example.com/enrichly" disabled={v.notifyOn === 'None'} />
+            <p className="mt-1 text-xs text-stone-400">Terminal states POST <span className="font-mono">{"{event, jobId, executionId, status, attempt}"}</span>. Delivery is logged on the execution.</p>
+          </div>
+        </div>
       </fieldset>
 
       <button className="btn-primary w-full py-3 sm:w-auto sm:px-8" disabled={busy}>{busy ? 'Saving…' : submitLabel}</button>

@@ -2,6 +2,7 @@
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, ExecutionDetail } from '@/lib/api';
+import { useLiveUpdates } from '@/lib/realtime';
 import { useRequireAuth } from '@/components/AuthBar';
 import { ErrorBox, SectionLabel, SkeletonRows, StatusBadge, timeAgo } from '@/components/ui';
 
@@ -17,6 +18,11 @@ export default function ExecutionPage({ params }: { params: Promise<{ id: string
     try { setEx(await api.getExecution(id)); }
     catch (e: any) { setErr(e.message); }
   }
+
+  // Instant refresh on worker broadcast for this execution (polling below stays as fallback).
+  const live = useLiveUpdates((e) => {
+    if (e.executionId === id && !document.hidden) load();
+  }, id);
   useEffect(() => { if (ready) load(); }, [ready]);
   useEffect(() => {
     if (!ready || ex?.status === 'Success' || ex?.status === 'Failed' || ex?.status === 'Cancelled') return;
@@ -61,7 +67,7 @@ export default function ExecutionPage({ params }: { params: Promise<{ id: string
           <StatusBadge status={ex.status} />
           {!terminal && (
             <span className="pill !border-emerald-300 !bg-emerald-50 !text-emerald-800">
-              <span className="dot bg-emerald-600 text-emerald-600 dot-live" /> live
+              <span className="dot bg-emerald-600 text-emerald-600 dot-live" /> {live ? 'realtime' : 'live'}
             </span>
           )}
           <span className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">

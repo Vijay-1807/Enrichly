@@ -42,7 +42,7 @@ public class JobScheduler : BackgroundService
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
         var due = await db.Jobs.FromSqlRaw(
-            @"SELECT ""Id"", ""UserId"", ""Name"", ""Description"", ""Type"", ""Url"", ""Method"", ""HeadersJson"", ""Body"", ""ScheduleMode"", ""IntervalSeconds"", ""Enabled"", ""MaxRetries"", ""TimeoutSeconds"", ""LastRunAt"", ""NextRunAt"", ""CreatedAt"", ""UpdatedAt"", ""xmin"" FROM ""jobs"" WHERE ""Enabled"" = TRUE AND ""ScheduleMode"" = 'Interval' AND (""NextRunAt"" IS NULL OR ""NextRunAt"" <= NOW()) FOR UPDATE SKIP LOCKED")
+            @"SELECT ""Id"", ""UserId"", ""Name"", ""Description"", ""Type"", ""Url"", ""Method"", ""HeadersJson"", ""Body"", ""ScheduleMode"", ""IntervalSeconds"", ""Enabled"", ""MaxRetries"", ""TimeoutSeconds"", ""LastRunAt"", ""NextRunAt"", ""CreatedAt"", ""UpdatedAt"", ""NotificationUrl"", ""NotifyOn"", ""xmin"" FROM ""jobs"" WHERE ""Enabled"" = TRUE AND ""ScheduleMode"" = 'Interval' AND (""NextRunAt"" IS NULL OR ""NextRunAt"" <= NOW()) FOR UPDATE SKIP LOCKED")
             .ToListAsync(ct);
 
         if (due.Count == 0) { await tx.RollbackAsync(ct); return; }

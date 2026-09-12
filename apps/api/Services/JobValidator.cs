@@ -21,11 +21,24 @@ public static class JobValidator
             return (false, $"HeadersJson must be a JSON object. {hErr}");
         if ((string.Equals(r.Method, "GET", StringComparison.OrdinalIgnoreCase) || string.Equals(r.Method, "HEAD", StringComparison.OrdinalIgnoreCase)) && !string.IsNullOrWhiteSpace(r.Body))
             return (false, "GET/HEAD requests should not have a body.");
+        var notifyOn = string.IsNullOrWhiteSpace(r.NotifyOn) ? "None" : r.NotifyOn.Trim();
+        if (notifyOn is not ("None" or "Failed" or "Success" or "All"))
+            return (false, "NotifyOn must be None, Failed, Success, or All.");
+        if (!string.IsNullOrWhiteSpace(r.NotificationUrl))
+        {
+            if (!Uri.TryCreate(r.NotificationUrl.Trim(), UriKind.Absolute, out var nu) || (nu.Scheme != "http" && nu.Scheme != "https"))
+                return (false, "NotificationUrl must be an absolute http(s) URL.");
+            if (notifyOn == "None")
+                return (false, "NotifyOn must be Failed, Success, or All when NotificationUrl is set.");
+        }
         return (true, null);
     }
 
     public static (bool Ok, string? Error) ValidateUpdate(UpdateJobRequest r)
-        => ValidateCreate(new CreateJobRequest(r.Name, r.Description, r.Url, r.Method, r.HeadersJson, r.Body, r.ScheduleMode, r.IntervalSeconds, r.Enabled, r.MaxRetries, r.TimeoutSeconds));
+        => ValidateCreate(new CreateJobRequest(r.Name, r.Description, r.Url, r.Method, r.HeadersJson, r.Body, r.ScheduleMode, r.IntervalSeconds, r.Enabled, r.MaxRetries, r.TimeoutSeconds, r.NotificationUrl, r.NotifyOn));
+
+    public static string NormalizeNotifyOn(string? v)
+        => v?.Trim() is "Failed" or "Success" or "All" ? v.Trim() : "None";
 
     private static bool IsJsonObject(string s, out string? err)
     {

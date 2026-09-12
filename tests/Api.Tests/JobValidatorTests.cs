@@ -8,7 +8,7 @@ public class JobValidatorTests
     [Fact]
     public void Rejects_BadUrl()
     {
-        var r = new CreateJobRequest("n", null, "not-a-url", "GET", null, null, "Manual", null, true, 3, 30);
+        var r = new CreateJobRequest("n", null, "not-a-url", "GET", null, null, "Manual", null, true, 3, 30, null, "None");
         var (ok, err) = JobValidator.ValidateCreate(r);
         Assert.False(ok);
         Assert.Contains("Url", err);
@@ -17,7 +17,7 @@ public class JobValidatorTests
     [Fact]
     public void Rejects_BadMethod()
     {
-        var r = new CreateJobRequest("n", null, "https://example.com", "BREW", null, null, "Manual", null, true, 3, 30);
+        var r = new CreateJobRequest("n", null, "https://example.com", "BREW", null, null, "Manual", null, true, 3, 30, null, "None");
         var (ok, _) = JobValidator.ValidateCreate(r);
         Assert.False(ok);
     }
@@ -25,7 +25,7 @@ public class JobValidatorTests
     [Fact]
     public void Rejects_ShortInterval()
     {
-        var r = new CreateJobRequest("n", null, "https://example.com", "GET", null, null, "Interval", 10, true, 3, 30);
+        var r = new CreateJobRequest("n", null, "https://example.com", "GET", null, null, "Interval", 10, true, 3, 30, null, "None");
         var (ok, err) = JobValidator.ValidateCreate(r);
         Assert.False(ok);
         Assert.Contains("IntervalSeconds", err);
@@ -34,7 +34,7 @@ public class JobValidatorTests
     [Fact]
     public void Rejects_BadHeadersJson()
     {
-        var r = new CreateJobRequest("n", null, "https://example.com", "GET", "{bad", null, "Manual", null, true, 3, 30);
+        var r = new CreateJobRequest("n", null, "https://example.com", "GET", "{bad", null, "Manual", null, true, 3, 30, null, "None");
         var (ok, _) = JobValidator.ValidateCreate(r);
         Assert.False(ok);
     }
@@ -43,7 +43,32 @@ public class JobValidatorTests
     public void Accepts_ValidJob()
     {
         var r = new CreateJobRequest("Sync", "desc", "https://example.com/hook", "POST",
-            "{\"X-Api-Key\":\"abc\"}", "{\"a\":1}", "Interval", 3600, true, 3, 30);
+            "{\"X-Api-Key\":\"abc\"}", "{\"a\":1}", "Interval", 3600, true, 3, 30, null, "None");
+        var (ok, _) = JobValidator.ValidateCreate(r);
+        Assert.True(ok);
+    }
+
+    [Fact]
+    public void Rejects_BadNotifyOn()
+    {
+        var r = new CreateJobRequest("n", null, "https://example.com", "GET", null, null, "Manual", null, true, 3, 30, null, "Sometimes");
+        var (ok, err) = JobValidator.ValidateCreate(r);
+        Assert.False(ok);
+        Assert.Contains("NotifyOn", err);
+    }
+
+    [Fact]
+    public void Rejects_UrlWithoutNotifyOn()
+    {
+        var r = new CreateJobRequest("n", null, "https://example.com", "GET", null, null, "Manual", null, true, 3, 30, "https://example.com/hook", "None");
+        var (ok, _) = JobValidator.ValidateCreate(r);
+        Assert.False(ok);
+    }
+
+    [Fact]
+    public void Accepts_NotifyConfig()
+    {
+        var r = new CreateJobRequest("n", null, "https://example.com", "GET", null, null, "Manual", null, true, 3, 30, "https://example.com/hook", "Failed");
         var (ok, _) = JobValidator.ValidateCreate(r);
         Assert.True(ok);
     }
