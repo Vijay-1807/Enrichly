@@ -75,11 +75,16 @@ export const api = {
 
 export function statusColor(s?: string | null) {
   switch ((s || '').toLowerCase()) {
-    case 'success': return 'bg-emerald-100 text-emerald-800';
-    case 'failed': return 'bg-red-100 text-red-800';
-    case 'running': return 'bg-blue-100 text-blue-800';
-    case 'queued': return 'bg-amber-100 text-amber-800';
-    case 'cancelled': return 'bg-slate-200 text-slate-700';
-    default: return 'bg-slate-100 text-slate-700';
+    case 'success': return 'bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200';
+    case 'failed': return 'bg-red-100 text-red-900 ring-1 ring-red-200';
+    case 'running': return 'bg-sky-100 text-sky-900 ring-1 ring-sky-200';
+    case 'queued': return 'bg-amber-100 text-amber-900 ring-1 ring-amber-300';
+    case 'cancelled': return 'bg-stone-200 text-stone-600 ring-1 ring-stone-300';
+    default: return 'bg-stone-100 text-stone-500 ring-1 ring-stone-200';
   }
+}
+
+export function isLiveStatus(s?: string | null) {
+  const v = (s || '').toLowerCase();
+  return v === 'running' || v === 'queued';
 }
