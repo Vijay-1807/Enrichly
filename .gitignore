@@ -1,0 +1,17 @@
+.env
+.env.local
+node_modules/
+.next/
+out/
+dist/
+bin/
+obj/
+*.user
+.vs/
+.idea/
+*.log
+.DS_Store
+Thumbs.db
+coverage/
+TestResults/
+pgdata/

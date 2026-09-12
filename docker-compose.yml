@@ -1,0 +1,66 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: enrichly_jobs
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./apps/api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=enrichly_jobs;Username=postgres;Password=postgres"
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-please-32-chars-minimum!!}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      ASPNETCORE_ENVIRONMENT: Production
+      Worker__PollIntervalSeconds: 2
+      Worker__StaleTimeoutSeconds: 120
+      Scheduler__IntervalSeconds: 15
+    ports:
+      - "5000:8080"
+
+  # Second replica of the same image = second worker (competing consumers).
+  # The API+worker are hosted together; scale api/worker to prove no double-execution.
+  worker:
+    build: ./apps/api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=enrichly_jobs;Username=postgres;Password=postgres"
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-please-32-chars-minimum!!}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      ASPNETCORE_ENVIRONMENT: Production
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000}
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000}
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
