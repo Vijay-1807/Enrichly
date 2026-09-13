@@ -1,13 +1,13 @@
 'use client';
-import { use, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, Job, ExecutionSummary } from '@/lib/api';
 import { useRequireAuth } from '@/components/AuthBar';
 import { JobForm } from '@/components/JobForm';
 import { Empty, ErrorBox, ICONS, LineIcon, SectionLabel, SkeletonRows, StatusBadge, timeAgo } from '@/components/ui';
 
-export default function JobDetail({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function JobDetail({ params }: { params: { id: string } }) {
+  const { id } = params;
   const ready = useRequireAuth();
   const [job, setJob] = useState<Job | null>(null);
   const [execs, setExecs] = useState<ExecutionSummary[]>([]);

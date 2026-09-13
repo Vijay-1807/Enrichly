@@ -1,13 +1,13 @@
 'use client';
-import { use, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, ExecutionDetail } from '@/lib/api';
 import { useLiveUpdates } from '@/lib/realtime';
 import { useRequireAuth } from '@/components/AuthBar';
-import { ErrorBox, SectionLabel, SkeletonRows, StatusBadge, timeAgo } from '@/components/ui';
+import { ErrorBox, ICONS, LineIcon, SectionLabel, StatusBadge, timeAgo } from '@/components/ui';
 
-export default function ExecutionPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function ExecutionPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const ready = useRequireAuth();
   const [ex, setEx] = useState<ExecutionDetail | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -19,7 +19,6 @@ export default function ExecutionPage({ params }: { params: Promise<{ id: string
     catch (e: any) { setErr(e.message); }
   }
 
-  // Instant refresh on worker broadcast for this execution (polling below stays as fallback).
   const live = useLiveUpdates((e) => {
     if (e.executionId === id && !document.hidden) load();
   }, id);
@@ -32,7 +31,7 @@ export default function ExecutionPage({ params }: { params: Promise<{ id: string
 
   if (!ready) return null;
   if (err) return <div className="animate-enter"><ErrorBox message={err} onRetry={load} /></div>;
-  if (!ex) return <div className="card"><SkeletonRows n={5} /></div>;
+  if (!ex) return <div className="card p-6"><div className="space-y-3">{[1,2,3,4,5].map(i => <div key={i} className="skeleton h-12 w-full" />)}</div></div>;
   const terminal = ['Success', 'Failed', 'Cancelled'].includes(ex.status);
 
   async function retry() {
@@ -63,7 +62,7 @@ export default function ExecutionPage({ params }: { params: Promise<{ id: string
       <section className="animate-enter space-y-4" style={{ ['--d' as any]: '0ms' }}>
         <Link href={`/jobs/${ex.jobId}`} className="text-sm font-medium text-stone-400 transition hover:text-[#15201a]">← {ex.jobName}</Link>
         <div className="flex flex-wrap items-center gap-4">
-          <h1 className="h-display text-4xl sm:text-5xl">Run <span className="font-mono text-[#2e7d5b]">#{ex.id.slice(0, 8)}</span></h1>
+          <h1 className="h-display text-3xl sm:text-5xl">Run <span className="font-mono text-[#2e7d5b]">#{ex.id.slice(0, 8)}</span></h1>
           <StatusBadge status={ex.status} />
           {!terminal && (
             <span className="pill !border-emerald-300 !bg-emerald-50 !text-emerald-800">
