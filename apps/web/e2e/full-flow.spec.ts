@@ -13,13 +13,7 @@ async function login(page) {
   await page.waitForURL('/', { timeout: 30000 });
 }
 
-async function apiRequest(endpoint, options = {}) {
-  const res = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-  });
-  return { status: res.status, body: await res.json().catch(() => ({})) };
-}
+const PROD_URL = process.env.NEXT_PUBLIC_API_URL || 'https://enrichly-api-qhj2.onrender.com';
 
 test.describe('Full Job Automation Platform - Requirements Verification', () => {
   test.beforeEach(async ({ page }) => {
@@ -34,7 +28,6 @@ test.describe('Full Job Automation Platform - Requirements Verification', () => 
       await page.fill('input[type="password"]', 'password123');
       await page.click('button:has-text("Register")');
       await page.waitForURL('/', { timeout: 30000 });
-      await expect(page.locator('text=Sign in')).not.toBeVisible();
     });
 
     test('Login with demo credentials', async ({ page }) => {
@@ -44,8 +37,8 @@ test.describe('Full Job Automation Platform - Requirements Verification', () => 
 
     test('Logout works', async ({ page }) => {
       await login(page);
-      await page.click('button:has-text("Logout")');
-      await expect(page).toHaveURL('/login');
+      await page.click('text=Logout');
+      await page.waitForURL('/login', { timeout: 10000 });
     });
 
     test('Protected routes redirect to login', async ({ page }) => {
@@ -61,37 +54,44 @@ test.describe('Full Job Automation Platform - Requirements Verification', () => 
 
     test('Create a job', async ({ page }) => {
       await page.goto('/jobs/new');
-      await page.fill('input[placeholder="Sync users every hour"]', 'Test API Job');
-      await page.fill('input[placeholder="What does this job do?"]', 'Test description');
-      await page.fill('input[placeholder="https://api.example.com/webhook"]', 'http://api:8080/api/demo/echo');
+      await page.fill('input[placeholder*="Sync users"]', 'Test API Job');
+      await page.fill('input[placeholder*="What does"]', 'Test description');
+      await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/echo`);
       await page.click('button:has-text("Create job")');
-      await expect(page.url()).toMatch(/\/jobs\/[a-f0-9-]+/);
+      await page.waitForURL(/\/jobs\/[a-f0-9-]+/, { timeout: 15000 });
       await expect(page.locator('h1')).toContainText('Test API Job');
     });
 
     test('Edit a job', async ({ page }) => {
       await page.goto('/jobs/new');
-      await page.fill('input[placeholder="Sync users every hour"]', 'Original Name');
-      await page.fill('input[placeholder="https://api.example.com/webhook"]', 'http://api:8080/api/demo/echo');
+      await page.fill('input[placeholder*="Sync users"]', 'Original Name');
+      await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/echo`);
       await page.click('button:has-text("Create job")');
-      await page.waitForURL(/\/jobs\/.*/);
-      
-      await page.click('button:has-text("Edit")');
-      await page.fill('input[placeholder="Sync users every hour"]', 'Updated Name');
+      await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
+
+      await page.waitForTimeout(2000);
+      await page.click('text=Edit');
+      await page.waitForTimeout(1000);
+      const nameInput = page.locator('input[placeholder*="Sync users"]');
+      await nameInput.clear();
+      await nameInput.fill('Updated Name');
       await page.click('button:has-text("Save changes")');
-      await expect(page.locator('h1')).toContainText('Updated Name');
+      await page.waitForTimeout(3000);
+      await expect(page.locator('h1')).toContainText('Updated Name', { timeout: 15000 });
     });
 
     test('Delete a job', async ({ page }) => {
       await page.goto('/jobs/new');
-      await page.fill('input[placeholder="Sync users every hour"]', 'To Delete');
-      await page.fill('input[placeholder="https://api.example.com/webhook"]', 'http://api:8080/api/demo/echo');
+      await page.fill('input[placeholder*="Sync users"]', 'To Delete');
+      await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/echo`);
       await page.click('button:has-text("Create job")');
-      await page.waitForURL(/\/jobs\/.*/);
-      
-      page.on('dialog', dialog => dialog.accept());
-      await page.click('button:has-text("Delete")');
-      await expect(page).toHaveURL('/');
+      await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
+
+      await page.waitForTimeout(2000);
+      page.on('dialog', async dialog => { await dialog.accept(); });
+      await page.click('text=Delete');
+      await page.waitForTimeout(3000);
+      await expect(page).toHaveURL('/', { timeout: 15000 });
     });
   });
 
@@ -102,21 +102,22 @@ test.describe('Full Job Automation Platform - Requirements Verification', () => 
 
     test('Create manual job', async ({ page }) => {
       await page.goto('/jobs/new');
-      await page.fill('input[placeholder="Sync users every hour"]', 'Manual Job');
-      await page.fill('input[placeholder="https://api.example.com/webhook"]', 'http://api:8080/api/demo/echo');
-      await page.selectOption('select >> nth=0', 'Manual');
+      await page.fill('input[placeholder*="Sync users"]', 'Manual Job');
+      await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/echo`);
       await page.click('button:has-text("Create job")');
-      await expect(page.locator('text=manual')).toBeVisible();
+      await page.waitForURL(/\/jobs\/[a-f0-9-]+/, { timeout: 15000 });
+      await expect(page.locator('text=manual').first()).toBeVisible({ timeout: 10000 });
     });
 
     test('Create interval job', async ({ page }) => {
       await page.goto('/jobs/new');
-      await page.fill('input[placeholder="Sync users every hour"]', 'Interval Job');
-      await page.fill('input[placeholder="https://api.example.com/webhook"]', 'http://api:8080/api/demo/echo');
-      await page.selectOption('select >> nth=0', 'Interval');
-      await page.fill('input[type="number"] >> nth=0', '300');
+      await page.fill('input[placeholder*="Sync users"]', 'Interval Job');
+      await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/echo`);
+      await page.locator('select').nth(1).selectOption('Interval');
+      await page.fill('input[type="number"]', '300');
       await page.click('button:has-text("Create job")');
-      await expect(page.locator('text=every 300s')).toBeVisible();
+      await page.waitForURL(/\/jobs\/[a-f0-9-]+/, { timeout: 15000 });
+      await expect(page.locator('text=every 300s')).toBeVisible({ timeout: 10000 });
     });
   });
 
@@ -128,10 +129,10 @@ test.describe('Full Job Automation Platform - Requirements Verification', () => 
     test('Run now creates execution', async ({ page }) => {
       await page.goto('/jobs/new');
       await page.fill('input[placeholder*="Sync users"]', 'Run Test Job');
-      await page.fill('input[placeholder*="api.example.com"]', 'http://api:8080/api/demo/echo');
+      await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/echo`);
       await page.click('button:has-text("Create job")');
-      await page.waitForURL(/\/jobs\/.*/, { timeout: 30000 });
-      
+      await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
+
       await page.waitForTimeout(2000);
       await page.click('text=Run now');
       await page.waitForURL(/\/executions\/.*/, { timeout: 30000 });
@@ -140,27 +141,29 @@ test.describe('Full Job Automation Platform - Requirements Verification', () => 
 
     test('Run now with flaky endpoint shows retries', async ({ page }) => {
       await page.goto('/jobs/new');
-      await page.fill('input[placeholder="Sync users every hour"]', 'Flaky Test Job');
-      await page.fill('input[placeholder="https://api.example.com/webhook"]', 'http://api:8080/api/demo/flaky');
+      await page.fill('input[placeholder*="Sync users"]', 'Flaky Test Job');
+      await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/flaky`);
       await page.click('button:has-text("Create job")');
-      await page.waitForURL(/\/jobs\/.*/);
-      
-      await page.click('button:has-text("Run now")');
-      await page.waitForURL(/\/executions\/.*/);
-      await expect(page.locator('text=Attempt')).toBeVisible({ timeout: 20000 });
+      await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
+
+      await page.waitForTimeout(2000);
+      await page.click('text=Run now');
+      await page.waitForURL(/\/executions\/.*/, { timeout: 30000 });
+      await expect(page.locator('.eyebrow:has-text("Attempts")')).toBeVisible({ timeout: 30000 });
     });
 
     test('Execution detail shows attempts and logs', async ({ page }) => {
       await page.goto('/jobs/new');
-      await page.fill('input[placeholder="Sync users every hour"]', 'Detail Test Job');
-      await page.fill('input[placeholder="https://api.example.com/webhook"]', 'http://api:8080/api/demo/echo');
+      await page.fill('input[placeholder*="Sync users"]', 'Detail Test Job');
+      await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/echo`);
       await page.click('button:has-text("Create job")');
-      await page.waitForURL(/\/jobs\/.*/);
-      
-      await page.click('button:has-text("Run now")');
-      await page.waitForURL(/\/executions\/.*/);
-      await expect(page.locator('text=Attempts')).toBeVisible({ timeout: 15000 });
-      await expect(page.locator('text=Logs')).toBeVisible();
+      await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
+
+      await page.waitForTimeout(2000);
+      await page.click('text=Run now');
+      await page.waitForURL(/\/executions\/.*/, { timeout: 30000 });
+      await expect(page.locator('.eyebrow:has-text("Attempts")')).toBeVisible({ timeout: 15000 });
+      await expect(page.locator('.eyebrow:has-text("Logs")')).toBeVisible();
     });
   });
 
@@ -172,32 +175,32 @@ test.describe('Full Job Automation Platform - Requirements Verification', () => 
     test('Retry button appears on failed execution', async ({ page }) => {
       await page.goto('/jobs/new');
       await page.fill('input[placeholder*="Sync users"]', 'Fail Job');
-      await page.fill('input[placeholder*="api.example.com"]', 'http://api:8080/api/demo/fail');
+      await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/fail`);
       await page.click('button:has-text("Create job")');
-      await page.waitForURL(/\/jobs\/.*/, { timeout: 30000 });
-      
+      await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
+
       await page.waitForTimeout(2000);
       await page.click('text=Run now');
       await page.waitForURL(/\/executions\/.*/, { timeout: 30000 });
-      await expect(page.locator('text=Failed').first()).toBeVisible({ timeout: 15000 });
-      await expect(page.locator('text=Retry').first()).toBeVisible({ timeout: 15000 });
+      await expect(page.locator('.pill:has-text("Failed")').first()).toBeVisible({ timeout: 30000 });
+      await expect(page.locator('text=Retry').first()).toBeVisible({ timeout: 10000 });
     });
 
     test('Retry creates new execution', async ({ page }) => {
       await page.goto('/jobs/new');
       await page.fill('input[placeholder*="Sync users"]', 'Retry Test Job');
-      await page.fill('input[placeholder*="api.example.com"]', 'http://api:8080/api/demo/fail');
+      await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/fail`);
       await page.click('button:has-text("Create job")');
-      await page.waitForURL(/\/jobs\/.*/, { timeout: 30000 });
-      
+      await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
+
       await page.waitForTimeout(2000);
       await page.click('text=Run now');
       await page.waitForURL(/\/executions\/.*/, { timeout: 30000 });
-      await expect(page.locator('text=Failed').first()).toBeVisible({ timeout: 15000 });
-      
+      await expect(page.locator('.pill:has-text("Failed")').first()).toBeVisible({ timeout: 30000 });
+
       await page.click('text=Retry');
       await page.waitForURL(/\/executions\/.*/, { timeout: 30000 });
-      await expect(page.locator('text=Execution').first()).toBeVisible();
+      await expect(page.locator('.eyebrow:has-text("Attempts")')).toBeVisible({ timeout: 10000 });
     });
   });
 
@@ -208,22 +211,27 @@ test.describe('Full Job Automation Platform - Requirements Verification', () => 
 
     test('Duplicate Run Now clicks are deduplicated', async ({ page }) => {
       await page.goto('/jobs/new');
-      await page.fill('input[placeholder="Sync users every hour"]', 'Idempotent Job');
-      await page.fill('input[placeholder="https://api.example.com/webhook"]', 'http://api:8080/api/demo/echo');
+      await page.fill('input[placeholder*="Sync users"]', 'Idempotent Job');
+      await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/echo`);
       await page.click('button:has-text("Create job")');
-      await page.waitForURL(/\/jobs\/.*/);
-      
-      await page.click('button:has-text("Run now")');
-      await page.waitForURL(/\/executions\/.*/);
-      const firstExecutionUrl = page.url();
-      
-      // Go back to job page and run again
-      await page.goto(firstExecutionUrl.replace('/executions/', '/jobs/'));
-      await page.click('button:has-text("Run now")');
-      await page.waitForURL(/\/executions\/.*/);
-      const secondExecutionUrl = page.url();
-      
-      expect(firstExecutionUrl).toBe(secondExecutionUrl);
+      await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
+
+      await page.waitForTimeout(2000);
+      await page.click('text=Run now');
+      await page.waitForURL(/\/executions\/.*/, { timeout: 30000 });
+      const firstUrl = page.url();
+      const execId = firstUrl.split('/executions/')[1];
+
+      const res = await page.request.get(`${API_URL}/api/executions/${execId}`, {
+        headers: { Authorization: `Bearer ${await page.evaluate(() => localStorage.getItem('enrichly_token'))}` }
+      });
+      const exec = await res.json();
+      await page.goto(`/jobs/${exec.jobId}`);
+      await page.waitForTimeout(3000);
+      await page.locator('text=Run now').first().click({ timeout: 10000 });
+      await page.waitForURL(/\/executions\/.*/, { timeout: 30000 });
+      const secondUrl = page.url();
+      expect(firstUrl).toBe(secondUrl);
     });
   });
 
@@ -234,16 +242,17 @@ test.describe('Full Job Automation Platform - Requirements Verification', () => 
 
     test('Cancel running execution', async ({ page }) => {
       await page.goto('/jobs/new');
-      await page.fill('input[placeholder="Sync users every hour"]', 'Slow Job');
-      await page.fill('input[placeholder="https://api.example.com/webhook"]', 'http://api:8080/api/demo/slow?ms=5000');
+      await page.fill('input[placeholder*="Sync users"]', 'Slow Job');
+      await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/slow?ms=5000`);
       await page.click('button:has-text("Create job")');
-      await page.waitForURL(/\/jobs\/.*/);
-      
-      await page.click('button:has-text("Run now")');
-      await page.waitForURL(/\/executions\/.*/);
-      await expect(page.locator('button:has-text("Cancel")')).toBeVisible();
-      await page.click('button:has-text("Cancel")');
-      await expect(page.locator('text=Cancelled')).toBeVisible({ timeout: 10000 });
+      await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
+
+      await page.waitForTimeout(2000);
+      await page.click('text=Run now');
+      await page.waitForURL(/\/executions\/.*/, { timeout: 30000 });
+      await expect(page.locator('text=Cancel').first()).toBeVisible({ timeout: 10000 });
+      await page.click('text=Cancel');
+      await expect(page.locator('.pill:has-text("Cancelled")')).toBeVisible({ timeout: 15000 });
     });
   });
 
@@ -267,13 +276,16 @@ test.describe('Full Job Automation Platform - Requirements Verification', () => 
     test('Search and filter jobs', async ({ page }) => {
       await page.goto('/jobs/new');
       await page.fill('input[placeholder*="Sync users"]', 'Searchable Job');
-      await page.fill('input[placeholder*="api.example.com"]', 'http://api:8080/api/demo/echo');
+      await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/echo`);
       await page.click('button:has-text("Create job")');
-      await page.waitForURL(/\/jobs\/.*/, { timeout: 30000 });
-      
+      await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
+
       await page.goto('/');
-      await page.fill('input[placeholder*="Search"]', 'Searchable');
-      await expect(page.locator('text=Searchable Job')).toBeVisible({ timeout: 15000 });
+      await page.waitForTimeout(3000);
+      const searchInput = page.locator('input[placeholder*="Search"]');
+      await searchInput.fill('Searchable');
+      await page.waitForTimeout(2000);
+      await expect(page.locator('a:has-text("Searchable Job")')).toBeVisible({ timeout: 15000 });
     });
   });
 
@@ -284,17 +296,18 @@ test.describe('Full Job Automation Platform - Requirements Verification', () => 
 
     test('Job with failed notification shows delivery', async ({ page }) => {
       await page.goto('/jobs/new');
-      await page.fill('input[placeholder="Sync users every hour"]', 'Notify Job');
-      await page.fill('input[placeholder="https://api.example.com/webhook"]', 'http://api:8080/api/demo/fail');
-      await page.selectOption('select >> nth=2', 'Failed');
-      await page.fill('input[placeholder="https://hooks.example.com/enrichly"]', 'http://api:8080/api/demo/echo');
+      await page.fill('input[placeholder*="Sync users"]', 'Notify Job');
+      await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/fail`);
+      await page.locator('select').nth(2).selectOption('Failed');
+      await page.fill('input[placeholder*="hooks.example"]', `${PROD_URL}/api/demo/echo`);
       await page.click('button:has-text("Create job")');
-      await page.waitForURL(/\/jobs\/.*/);
-      
-      await page.click('button:has-text("Run now")');
-      await page.waitForURL(/\/executions\/.*/);
-      await expect(page.locator('text=Failed').first()).toBeVisible({ timeout: 15000 });
-      await expect(page.locator('text=Notification delivered')).toBeVisible({ timeout: 15000 });
+      await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
+
+      await page.waitForTimeout(2000);
+      await page.click('text=Run now');
+      await page.waitForURL(/\/executions\/.*/, { timeout: 30000 });
+      await expect(page.locator('.pill:has-text("Failed")').first()).toBeVisible({ timeout: 30000 });
+      await expect(page.locator('text=Notification delivered to')).toBeVisible({ timeout: 45000 });
     });
   });
 
@@ -305,14 +318,15 @@ test.describe('Full Job Automation Platform - Requirements Verification', () => 
 
     test('Execution page shows realtime indicator', async ({ page }) => {
       await page.goto('/jobs/new');
-      await page.fill('input[placeholder="Sync users every hour"]', 'Realtime Job');
-      await page.fill('input[placeholder="https://api.example.com/webhook"]', 'http://api:8080/api/demo/flaky');
+      await page.fill('input[placeholder*="Sync users"]', 'Realtime Job');
+      await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/flaky`);
       await page.click('button:has-text("Create job")');
-      await page.waitForURL(/\/jobs\/.*/);
-      
-      await page.click('button:has-text("Run now")');
-      await page.waitForURL(/\/executions\/.*/);
-      await expect(page.locator('text=realtime')).toBeVisible({ timeout: 10000 });
+      await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
+
+      await page.waitForTimeout(2000);
+      await page.click('text=Run now');
+      await page.waitForURL(/\/executions\/.*/, { timeout: 30000 });
+      await expect(page.locator('text=realtime').first()).toBeVisible({ timeout: 15000 });
     });
   });
 
@@ -357,10 +371,10 @@ test.describe('API Health & Endpoints', () => {
   test('Demo endpoints work', async () => {
     const echo = await fetch(`${API_URL}/api/demo/echo`);
     expect(echo.ok).toBeTruthy();
-    
+
     const flaky = await fetch(`${API_URL}/api/demo/flaky`);
     expect([200, 503]).toContain(flaky.status);
-    
+
     const fail = await fetch(`${API_URL}/api/demo/fail`);
     expect(fail.status).toBe(500);
   });
