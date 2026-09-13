@@ -28,7 +28,7 @@ public record CreateJobRequest(
     [Range(0, 10)] int MaxRetries,
     [Range(2, 120)] int TimeoutSeconds,
     string? NotificationUrl,
-    string NotifyOn);
+    string? NotifyOn = "None");
 
 public record UpdateJobRequest(
     [Required, MaxLength(200)] string Name,
@@ -44,7 +44,7 @@ public record UpdateJobRequest(
     [Range(2, 120)] int TimeoutSeconds,
     string? RowVersion,
     string? NotificationUrl,
-    string NotifyOn);
+    string? NotifyOn);
 
 public record JobResponse(
     Guid Id, string Name, string? Description, string Type, string Url, string Method,
