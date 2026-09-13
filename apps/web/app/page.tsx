@@ -69,9 +69,9 @@ export default function Dashboard() {
       <section className="animate-enter space-y-3" style={{ ['--d' as any]: '0ms' }}>
         <SectionLabel index="01" title="What we do" />
         <div className="flex flex-wrap items-end justify-between gap-6">
-          <h1 className="h-display max-w-2xl text-[42px] sm:text-[56px]">
-            Everything your jobs <span className="italic-accent">need.</span><br />
-            <span className="h-muted">Nothing failing</span> <span className="italic-accent">silently.</span>
+          <h1 className="h-display max-w-2xl text-[36px] sm:text-[56px]">
+            Everything your jobs <span className="display-accent">need.</span><br />
+            <span className="h-muted">Nothing failing</span> <span className="display-accent">silently.</span>
           </h1>
           <p className="max-w-xs pb-2 text-[15px] leading-relaxed text-stone-500">
             One connected platform. From the first job to the next retry, every piece together.
@@ -115,17 +115,17 @@ export default function Dashboard() {
           : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {workers.map((w, i) => (
-                <div key={w.workerId} className="card card-hover animate-enter p-4" style={{ ['--d' as any]: `${i * 60}ms` }}>
-                  <div className="flex items-center gap-2">
-                    <span className={`dot ${w.alive ? 'bg-emerald-600 text-emerald-600 dot-live' : 'bg-stone-300 text-stone-300'}`} />
-                    <span className="truncate font-mono text-[13px] font-semibold" title={w.workerId}>
+                <div key={w.workerId} className="card card-hover animate-enter overflow-hidden p-4" style={{ ['--d' as any]: `${i * 60}ms` }}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`dot flex-shrink-0 ${w.alive ? 'bg-emerald-600 text-emerald-600 dot-live' : 'bg-stone-300 text-stone-300'}`} />
+                    <span className="min-w-0 truncate font-mono text-[12px] sm:text-[13px] font-semibold" title={w.workerId}>
                       {w.workerId.split(':')[0]}:{w.workerId.split(':')[1]?.slice(0, 6)}
                     </span>
-                    <span className={`ml-auto text-[11px] font-bold uppercase tracking-wide ${w.alive ? 'text-emerald-700' : 'text-stone-400'}`}>
+                    <span className={`flex-shrink-0 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide ${w.alive ? 'text-emerald-700' : 'text-stone-400'}`}>
                       {w.alive ? 'alive' : 'stale'}
                     </span>
                   </div>
-                  <div className="mt-2 flex items-center gap-4 text-xs tabular-nums text-stone-500">
+                  <div className="mt-2 flex items-center gap-4 text-[11px] sm:text-xs tabular-nums text-stone-500">
                     <span>{w.processedCount} done</span>
                     <span className="ml-auto">seen {w.secondsSinceSeen}s ago</span>
                   </div>

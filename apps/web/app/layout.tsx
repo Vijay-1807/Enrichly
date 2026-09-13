@@ -12,6 +12,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&display=swap" rel="stylesheet" />
+      </head>
       <body>
         <header className="sticky top-0 z-20 border-b bg-[#f7f5f0]/90 backdrop-blur" style={{ borderColor: 'var(--line)' }}>
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-4 sm:px-6">
@@ -41,7 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="hidden border-t md:block" style={{ borderColor: 'var(--line)' }}>
             <div className="mx-auto flex max-w-6xl items-center gap-5 overflow-x-auto px-6 py-2 text-xs text-stone-500">
               <span className="flex items-center gap-5 whitespace-nowrap">
-                <span className="font-medium italic-accent">HTTP jobs</span>
+                <span className="font-medium green-accent">HTTP jobs</span>
                 <span className="text-stone-300">+</span>
               </span>
               <span className="flex items-center gap-5 whitespace-nowrap">
@@ -57,7 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <span className="text-stone-300">+</span>
               </span>
               <span className="flex items-center gap-5 whitespace-nowrap">
-                <span className="font-medium italic-accent">Full history</span>
+                <span className="font-medium green-accent">Full history</span>
               </span>
             </div>
           </div>
@@ -66,7 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer className="border-t" style={{ borderColor: 'var(--line)' }}>
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-6 py-6 text-xs text-stone-400">
             <span className="font-bold text-stone-600">enrichly<span className="green-accent">.</span></span>
-            <span>Job automation · <span className="italic-accent">PostgreSQL</span> is the source of truth · <span className="green-accent">atomic claims</span> · <span className="italic-accent">exponential backoff</span></span>
+            <span>Job automation · <span className="display-accent !text-[11px]">PostgreSQL</span> is the source of truth · <span className="green-accent">atomic claims</span> · <span className="display-accent !text-[11px]">exponential backoff</span></span>
           </div>
         </footer>
       </body>

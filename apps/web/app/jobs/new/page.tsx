@@ -13,7 +13,7 @@ export default function NewJob() {
       <section className="animate-enter space-y-3" style={{ ['--d' as any]: '0ms' }}>
         <Link href="/" className="text-sm font-medium text-stone-400 transition hover:text-[#15201a]">← Overview</Link>
         <SectionLabel index="01" title="New job" />
-        <h1 className="h-display text-4xl sm:text-5xl">Ship it.<br /><span className="h-muted">We&apos;ll</span> <span className="italic-accent">watch</span> <span className="h-muted">it run.</span></h1>
+        <h1 className="h-display text-4xl sm:text-5xl">Ship it.<br /><span className="h-muted">We&apos;ll</span> <span className="display-accent">watch</span> <span className="h-muted">it run.</span></h1>
         <p className="max-w-md text-[15px] text-stone-500">Point a worker at any HTTP endpoint. Start with a demo URL — <span className="green-accent">no external API needed.</span></p>
       </section>
       <JobForm submitLabel="Create job" onSubmit={async (p) => {

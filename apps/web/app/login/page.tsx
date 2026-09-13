@@ -28,7 +28,7 @@ export default function Login() {
           <LineIcon d={ICONS.layers} className="h-5 w-5 text-emerald-200" />
         </span>
         <div>
-          <p className="h-display text-[34px] text-white">Automate <span className="italic-accent text-emerald-200">the boring.</span><br /><span className="text-white/50">Observe</span> <span className="italic-accent text-emerald-300">everything.</span></p>
+          <p className="h-display text-[34px] text-white">Automate <span className="display-accent !text-emerald-200">the boring.</span><br /><span className="text-white/50">Observe</span> <span className="display-accent !text-emerald-300">everything.</span></p>
           <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-white/60">Jobs, workers, retries and <span className="text-emerald-300">full execution history</span> — in one connected platform.</p>
         </div>
         <p className="eyebrow !text-white/40">enrichly · job automation</p>

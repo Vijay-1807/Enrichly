@@ -37,10 +37,12 @@ body {
 .h-display {
   @apply font-semibold;
   letter-spacing: -0.035em;
-  line-height: 1.02;
+  line-height: 1.08;
 }
 .h-muted { color: var(--faint); }
-.italic-accent {
+.display-accent {
+  font-family: "Playfair Display", "DM Serif Display", Georgia, "Times New Roman", serif;
+  font-weight: 500;
   font-style: italic;
   color: var(--moss);
 }
