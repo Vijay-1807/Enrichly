@@ -1,13 +1,15 @@
 # Render Blueprint: one-click API + Postgres deploy.
-# In Render: New → Blueprint → select this repo. Then deploy the web app on Vercel
-# (see docs/DEPLOYMENT.md) and set FRONTEND_URL below to the Vercel URL.
+# FREE TIER: Both web service and Postgres use free plans ($0).
+# Web spins down after 15 min idle (cold start ~30-60s).
+# Postgres free tier expires after 30 days (recreate or upgrade before then).
+# For Vercel deployment of the web frontend, see docs/DEPLOYMENT.md.
 services:
   - type: web
     name: enrichly-api
     runtime: docker
     dockerfilePath: ./apps/api/Dockerfile
     dockerContext: ./apps/api
-    plan: starter
+    plan: free
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
@@ -17,7 +19,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        value: https://enrichly-web.vercel.app # ← replace with your Vercel URL, then redeploy
+        value: https://enrichly-web.vercel.app
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: Worker__PollIntervalSeconds

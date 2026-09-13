@@ -1,69 +1,126 @@
-# Deployment Guide — Enrichly Job Automation
+# Deployment Guide — Enrichly Job Automation (FREE)
 
-Target topology: **API + Postgres on Render**, **Web on Vercel**.
-Why split: Vercel is the best Next.js host; Render runs Docker + managed Postgres in one Blueprint.
+**Cost: $0** — Both services use free tiers. No credit card required.
 
-## 0. All environment variables (the complete list)
+- **API + Postgres**: Render (free Docker web service + free Postgres)
+- **Web Frontend**: Vercel (free Next.js hosting)
 
-| Variable | Service | Required | Example / notes |
-|---|---|---|---|
-| `DATABASE_URL` | API | ✅ prod | `postgresql://user:pass@host:5432/enrichly_jobs` — Render injects from database |
-| `JWT_SECRET` | API | ✅ prod | 32+ random chars — Render `generateValue`, or `openssl rand -base64 48` |
-| `FRONTEND_URL` | API | ✅ prod | `https://enrichly-web.vercel.app` — must exactly match the Vercel URL (CORS) |
-| `NEXT_PUBLIC_API_URL` | Web | ✅ prod | `https://enrichly-api.onrender.com` — baked at build time, no trailing slash |
-| `ConnectionStrings__Default` | API | local only | `Host=db;Port=5432;Database=enrichly_jobs;Username=postgres;Password=postgres` |
-| `Worker__PollIntervalSeconds` | API | no | `2` |
-| `Worker__StaleTimeoutSeconds` | API | no | `120` |
-| `Worker__LivenessWindowSeconds` | API | no | `60` (workers UI alive threshold) |
-| `Scheduler__IntervalSeconds` | API | no | `15` |
-| `ASPNETCORE_ENVIRONMENT` | API | no | `Production` on Render |
+## Prerequisites
 
-No `.env` file is committed. For local Docker, `docker compose` works with **no `.env` at all**
-(dev defaults). For production, set the four ✅ vars in the dashboards below.
+1. GitHub account (repo already pushed: `Vijay-1807/Enrichly`)
+2. Render account (free): https://dashboard.render.com
+3. Vercel account (free): https://vercel.com
 
-## 1. API + Postgres on Render (5 min)
+---
 
-1. Push this repo to GitHub (done: `Vijay-1807/Enrichly`).
-2. Render dashboard → **New → Blueprint** → select the repo → Apply (uses `render.yaml`).
-   This creates `enrichly-api` (Docker) + `enrichly-db` (Postgres, free).
-3. Wait for deploy → open `https://enrichly-api.onrender.com/api/health` → expect `{"status":"healthy",...}`.
-4. Copy the API URL — you need it for Vercel in step 2.
-5. After Vercel is live, come back: `enrichly-api` → Environment → set `FRONTEND_URL` to your
-   Vercel URL → **Manual Deploy**. (CORS will reject the browser until this matches.)
+## Step 1: Deploy API + Postgres on Render (5 min)
 
-Notes:
-- Migrations + demo user (`demo@enrichly.dev / password123`) run automatically on boot.
-- The API process also runs a worker + scheduler, so **one Render instance = full system**.
-  For true multi-worker, add a second service pointing at the same image + `DATABASE_URL`
-  (renders as the `worker` in `docker-compose.yml`).
-- Render free Postgres sleeps when idle; first request after idle takes ~30s. Starter fixes it.
-- SignalR realtime works on a single instance. Multi-instance needs a Redis backplane
-  (documented limitation in `ENGINEERING.md`); polling fallback keeps the UI correct regardless.
+1. Go to **Render Dashboard** → **New** → **Blueprint**
+2. Select your repo: `Vijay-1807/Enrichly`
+3. Render detects `render.yaml` and shows the services:
+   - `enrichly-api` (Docker web service, **free plan**)
+   - `enrichly-db` (Postgres, **free plan**)
+4. Click **Apply** — Render builds and deploys automatically
+5. Wait for deploy (~3-5 min) → open `https://enrichly-api.onrender.com/api/health`
+6. Expect: `{"status":"healthy","version":"1.0.0",...}`
 
-## 2. Web on Vercel (3 min)
+**Note:** Migrations + demo user (`demo@enrichly.dev / password123`) run on first boot.
 
-1. Vercel dashboard → **Add New → Project** → Import `Vijay-1807/Enrichly`.
-2. **Root Directory:** `apps/web` (important — the repo is a monorepo).
-3. Framework preset: Next.js (auto-detected). Build: `npm run build`. Output: default.
-4. Environment variable: `NEXT_PUBLIC_API_URL` = `https://enrichly-api.onrender.com`
-   (your Render URL from step 1 — this is baked in at build time).
-5. Deploy → open the Vercel URL → log in with `demo@enrichly.dev / password123`.
-6. Copy the Vercel URL back into Render `FRONTEND_URL` (step 1.5) and redeploy the API.
+### Free Tier Limitations (acceptable for demo)
 
-## 3. Verify production (2 min)
+| Limitation | Impact | Workaround |
+|---|---|---|
+| Web spins down after 15 min idle | Cold start takes ~30-60s | First visitor waits; subsequent visitors fast |
+| Postgres expires after 30 days | Data lost after expiry | Submit before Sep 14 (within 30 days) |
+| 750 free instance hours/month | ~31 days of one service | More than enough for demo |
+| 1 GB Postgres storage | Tiny for this app | No issue |
 
-1. Create job: `GET https://<api>/api/demo/flaky`, retries 3 → **Run now**.
-2. Execution page shows `realtime` badge (SignalR) and live attempt timeline.
-3. Create job: `GET https://<api>/api/demo/fail`, retries 0, Notify on **Failed**,
-   webhook `https://<api>/api/demo/echo` → run → execution logs show
-   `Notification delivered to …`.
-4. Dashboard → Workers section shows the Render worker `alive`.
-5. `GET https://<api>/api/health` → `healthy`.
+---
 
-## 4. Local Docker (unchanged)
+## Step 2: Deploy Web Frontend on Vercel (3 min)
 
-```bash
-cp .env.example .env   # optional; defaults work without it
-docker compose up --build
-# web http://localhost:3000 · api http://localhost:5000/api/health
-```
+1. Go to **Vercel Dashboard** → **Add New** → **Project**
+2. Import `Vijay-1807/Enrichly`
+3. **Root Directory:** `apps/web` (monorepo — important!)
+4. Framework: Next.js (auto-detected)
+5. **Environment Variable:** `NEXT_PUBLIC_API_URL` = `https://enrichly-api.onrender.com`
+   (this is baked at build time — no trailing slash)
+6. Click **Deploy**
+7. Open Vercel URL → log in with `demo@enrichly.dev / password123`
+
+---
+
+## Step 3: Fix CORS on Render (1 min)
+
+1. Go back to **Render Dashboard** → `enrichly-api` → **Environment**
+2. Set `FRONTEND_URL` to your Vercel URL (e.g., `https://enrichly-xyz.vercel.app`)
+3. Click **Save** → **Manual Deploy** → **Deploy latest commit**
+4. Wait for redeploy (~2 min)
+
+Without this, the browser will block API requests from Vercel.
+
+---
+
+## Step 4: Verify Production (2 min)
+
+1. Open your Vercel URL → Dashboard loads with stats
+2. **Create a job**: Click "New Job" → paste a URL (e.g., `https://httpbin.org/get`) → Save
+3. **Run it**: Click "Run Now" → Execution page shows attempts + logs
+4. **Test retry**: Create job with URL `https://httpbin.org/status/500`, set retries to 3 → Run → See automatic retries
+5. **Test notifications**: Create job with webhook URL `https://httpbin.org/post`, Notify on "Failed" → Run a failing job → See notification delivery
+6. **Workers**: Dashboard shows "Workers" section with alive status
+7. **Health**: Visit `https://enrichly-api.onrender.com/api/health` → `{"status":"healthy"}`
+
+---
+
+## Alternative: Deploy Everything on Render (no Vercel)
+
+If you prefer one platform, deploy the web app as a second Render service:
+
+1. Render Dashboard → **New** → **Web Service**
+2. Connect same repo `Vijay-1807/Enrichly`
+3. **Root Directory:** `apps/web`
+4. **Runtime:** Docker
+5. **Dockerfile:** `./apps/web/Dockerfile`
+6. **Build arg:** `NEXT_PUBLIC_API_URL=https://enrichly-api.onrender.com`
+7. **Plan:** Free
+8. Deploy → get URL → update `FRONTEND_URL` on API service
+
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| CORS error in browser | Set `FRONTEND_URL` on Render to match your web URL exactly |
+| API returns 404 on Vercel | Check `NEXT_PUBLIC_API_URL` is set (baked at build time) |
+| Cold start takes 60s | Normal for free tier; subsequent requests are fast |
+| Postgres connection refused | Render free Postgres may take 30s to wake from sleep |
+| Login fails | Use `demo@enrichly.dev` / `password123` (auto-seeded) |
+
+---
+
+## Environment Variables Reference
+
+| Variable | Service | Value |
+|---|---|---|
+| `DATABASE_URL` | API (Render) | Auto-injected from linked Postgres |
+| `JWT_SECRET` | API (Render) | Auto-generated by Render |
+| `FRONTEND_URL` | API (Render) | Your Vercel URL (e.g., `https://xxx.vercel.app`) |
+| `NEXT_PUBLIC_API_URL` | Web (Vercel) | `https://enrichly-api.onrender.com` |
+| `ASPNETCORE_ENVIRONMENT` | API | `Production` |
+
+---
+
+## Submission Checklist
+
+- [ ] API health endpoint returns `healthy`
+- [ ] Web frontend loads and shows dashboard
+- [ ] Can log in with demo credentials
+- [ ] Can create and run a job
+- [ ] Can view execution details with attempts
+- [ ] Retry logic works (flaky endpoint test)
+- [ ] Webhook notifications work
+- [ ] Workers section shows alive status
+- [ ] GitHub repo URL ready to share
+- [ ] Live URLs ready to share

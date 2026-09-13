@@ -107,29 +107,39 @@ two-workers-race-on-one-row test (runs when `TEST_DATABASE_URL` is set, skipped 
 TEST_DATABASE_URL="Host=localhost;Database=enrichly_jobs;Username=postgres;Password=postgres" dotnet test
 ```
 
-## Deployment
+## Deployment (FREE — $0)
 
-The app is 12-factor: all config via env vars. You need Postgres + API + Web.
+**Cost: $0** — No credit card required. Both services use free tiers.
 
-| Var | Where | Example |
+| Service | Platform | URL |
 |---|---|---|
-| `DATABASE_URL` or `ConnectionStrings__Default` | API | `postgresql://user:pass@host:5432/db` |
-| `JWT_SECRET` (32+ chars, required) | API | random string |
-| `FRONTEND_URL` | API (CORS) | `https://jobs.example.com` |
-| `NEXT_PUBLIC_API_URL` (baked at build) | Web | `https://api.example.com` |
+| API + Postgres | Render (free) | `https://enrichly-api.onrender.com` |
+| Web Frontend | Vercel (free) | *(your Vercel URL after deploy)* |
 
-**Option A — Render/Railway/Fly (recommended):**
-1. Create Postgres, copy its URL to `DATABASE_URL`.
-2. Deploy `apps/api` as a web service (Dockerfile included). Set `JWT_SECRET`, `FRONTEND_URL`, `DATABASE_URL`.
-3. Deploy `apps/web` with build arg `NEXT_PUBLIC_API_URL=<api url>`.
-4. Scale the API to 2+ instances to demo multiple workers.
+### Quick Deploy
 
-**Option B — single VPS:** `docker compose up --build -d` with a `.env` pointing at hosted Postgres.
+1. **Render Blueprint**: New → Blueprint → select repo → Apply (uses `render.yaml`)
+2. **Vercel**: Add New → Project → import repo → Root: `apps/web` → set `NEXT_PUBLIC_API_URL=https://enrichly-api.onrender.com` → Deploy
+3. **Fix CORS**: Set `FRONTEND_URL` on Render to your Vercel URL → redeploy
 
-Verify: open the live web URL → register → create a job with `GET <api>/api/demo/flaky` → Run now →
-watch attempts/logs → retry when it fails.
+Full step-by-step: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
-## API quick reference
+### Environment Variables
+
+| Variable | Service | Value |
+|---|---|---|
+| `DATABASE_URL` | API (Render) | Auto-injected from Postgres |
+| `JWT_SECRET` | API (Render) | Auto-generated |
+| `FRONTEND_URL` | API (Render) | Your Vercel URL |
+| `NEXT_PUBLIC_API_URL` | Web (Vercel) | `https://enrichly-api.onrender.com` |
+
+### Free Tier Notes
+
+- Web spins down after 15 min idle (cold start ~30-60s, then fast)
+- Postgres free tier expires after 30 days (submit by Sep 14 = within window)
+- 750 free instance hours/month (more than enough for demo)
+
+## API Quick Reference
 
 ```
 POST /api/auth/register|login
@@ -145,12 +155,6 @@ GET  /api/workers/health
 WS   /hubs/executions (SignalR: WatchExecution, executionUpdated events)
 GET  /api/demo/echo|flaky|fail|slow?ms=
 ```
-
-## Deployment (Render + Vercel)
-
-Full step-by-step with every env var: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
-Short version: Render Blueprint (`render.yaml`) for API + Postgres, Vercel project
-(root `apps/web`) for the frontend with `NEXT_PUBLIC_API_URL`.
 
 ## Known limitations
 
