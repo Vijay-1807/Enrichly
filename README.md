@@ -99,9 +99,13 @@ The API also runs `MigrateAsync()` on boot with retries, so Docker/production ne
 dotnet test tests/Api.Tests/Api.Tests.csproj
 ```
 
-30 tests covering: exponential backoff, state-transition rules, request validation,
-idempotent Run Now, user isolation, retry/cancel semantics, and a Postgres-backed
-two-workers-race-on-one-row test (runs when `TEST_DATABASE_URL` is set, skipped otherwise).
+47 tests covering: exponential backoff, state-transition rules, request validation,
+idempotent Run Now, user isolation, retry/cancel semantics, worker-liveness logic,
+and a Postgres-backed two-workers-race-on-one-row test (runs when `TEST_DATABASE_URL` is set, skipped otherwise).
+
+Plus 26 Playwright E2E tests against the deployed site (`apps/web/e2e/full-flow.spec.ts`):
+auth, CRUD, scheduling, run/retry/cancel, idempotency, search, notifications, SignalR,
+worker health, responsive, and API health/demo endpoints — all passing.
 
 ```bash
 TEST_DATABASE_URL="Host=localhost;Database=enrichly_jobs;Username=postgres;Password=postgres" dotnet test
@@ -113,13 +117,13 @@ TEST_DATABASE_URL="Host=localhost;Database=enrichly_jobs;Username=postgres;Passw
 
 | Service | Platform | URL |
 |---|---|---|
-| API + Postgres | Render (free) | `https://enrichly-api.onrender.com` |
-| Web Frontend | Vercel (free) | *(your Vercel URL after deploy)* |
+| API + Postgres | Render (free) | `https://enrichly-api-qhj2.onrender.com` |
+| Web Frontend | Vercel (free) | `https://enrichly-one.vercel.app` |
 
 ### Quick Deploy
 
 1. **Render Blueprint**: New → Blueprint → select repo → Apply (uses `render.yaml`)
-2. **Vercel**: Add New → Project → import repo → Root: `apps/web` → set `NEXT_PUBLIC_API_URL=https://enrichly-api.onrender.com` → Deploy
+2. **Vercel**: Add New → Project → import repo → Root: `apps/web` → set `NEXT_PUBLIC_API_URL=https://enrichly-api-qhj2.onrender.com` → Deploy
 3. **Fix CORS**: Set `FRONTEND_URL` on Render to your Vercel URL → redeploy
 
 Full step-by-step: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
@@ -131,7 +135,7 @@ Full step-by-step: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 | `DATABASE_URL` | API (Render) | Auto-injected from Postgres |
 | `JWT_SECRET` | API (Render) | Auto-generated |
 | `FRONTEND_URL` | API (Render) | Your Vercel URL |
-| `NEXT_PUBLIC_API_URL` | Web (Vercel) | `https://enrichly-api.onrender.com` |
+| `NEXT_PUBLIC_API_URL` | Web (Vercel) | `https://enrichly-api-qhj2.onrender.com` |
 
 ### Free Tier Notes
 
@@ -159,8 +163,8 @@ GET  /api/demo/echo|flaky|fail|slow?ms=
 ## Known limitations
 
 - Queue is Postgres polling (2s), not push-based — fine at this scale, higher latency than Redis pub/sub.
-- One job type (HTTP). No cron expressions (interval ≥ 60s only), no webhooks-in, no notifications.
-- No real-time websockets (5s/2.5s polling instead), no pagination beyond 100/page, logs capped at 200/execution.
+- One job type (HTTP). No cron expressions (interval ≥ 60s only), no webhooks-in, no email/Slack channels (outbound webhook notifications only).
+- Realtime via SignalR with HTTP polling as fallback (single-instance live; multi-instance would need a Redis backplane). No pagination beyond 100/page, logs capped at 200/execution.
 - Secrets in job headers are stored in plaintext — acceptable for the assignment, must move to a vault for prod.
 
 See `ENGINEERING.md` for the full reasoning.

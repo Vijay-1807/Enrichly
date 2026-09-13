@@ -92,7 +92,7 @@ Next.js (browser) ──HTTPS──▶ ASP.NET Core API ──EF Core──▶ P
 
 ## 7. Testing
 
-30 xUnit tests, focused where bugs hurt (not coverage theater):
+47 xUnit tests, focused where bugs hurt (not coverage theater):
 `RetryPolicy` (backoff math, caps, limits), `ExecutionTransitions` (all 11 legal/illegal edges),
 `JobValidator` (URL/verb/interval/headers/body rules), `ExecutionService` (idempotent replay,
 per-key isolation, user isolation mirroring controller scoping, retry linkage, cancel semantics),
