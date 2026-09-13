@@ -9,8 +9,6 @@ export const metadata: Metadata = {
   description: 'Create, schedule, run, and observe automated jobs with reliable workers.',
 };
 
-const STRIP = ['HTTP jobs', 'Interval scheduler', 'Parallel workers', 'Smart retries', 'Full history'];
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -42,20 +40,33 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
           <div className="hidden border-t md:block" style={{ borderColor: 'var(--line)' }}>
             <div className="mx-auto flex max-w-6xl items-center gap-5 overflow-x-auto px-6 py-2 text-xs text-stone-500">
-              {STRIP.map((s, i) => (
-                <span key={s} className="flex items-center gap-5 whitespace-nowrap">
-                  <span className="font-medium">{s}</span>
-                  {i < STRIP.length - 1 && <span className="text-stone-300">+</span>}
-                </span>
-              ))}
+              <span className="flex items-center gap-5 whitespace-nowrap">
+                <span className="font-medium italic-accent">HTTP jobs</span>
+                <span className="text-stone-300">+</span>
+              </span>
+              <span className="flex items-center gap-5 whitespace-nowrap">
+                <span className="font-medium">Interval scheduler</span>
+                <span className="text-stone-300">+</span>
+              </span>
+              <span className="flex items-center gap-5 whitespace-nowrap">
+                <span className="font-medium green-accent">Parallel workers</span>
+                <span className="text-stone-300">+</span>
+              </span>
+              <span className="flex items-center gap-5 whitespace-nowrap">
+                <span className="font-medium">Smart retries</span>
+                <span className="text-stone-300">+</span>
+              </span>
+              <span className="flex items-center gap-5 whitespace-nowrap">
+                <span className="font-medium italic-accent">Full history</span>
+              </span>
             </div>
           </div>
         </header>
         <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-14">{children}</main>
         <footer className="border-t" style={{ borderColor: 'var(--line)' }}>
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-6 py-6 text-xs text-stone-400">
-            <span className="font-bold text-stone-600">enrichly.</span>
-            <span>Job automation · PostgreSQL is the source of truth · atomic claims · exponential backoff</span>
+            <span className="font-bold text-stone-600">enrichly<span className="green-accent">.</span></span>
+            <span>Job automation · <span className="italic-accent">PostgreSQL</span> is the source of truth · <span className="green-accent">atomic claims</span> · <span className="italic-accent">exponential backoff</span></span>
           </div>
         </footer>
       </body>

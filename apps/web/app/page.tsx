@@ -70,8 +70,8 @@ export default function Dashboard() {
         <SectionLabel index="01" title="What we do" />
         <div className="flex flex-wrap items-end justify-between gap-6">
           <h1 className="h-display max-w-2xl text-[42px] sm:text-[56px]">
-            Everything your jobs need.<br />
-            <span className="h-muted">Nothing failing silently.</span>
+            Everything your jobs <span className="italic-accent">need.</span><br />
+            <span className="h-muted">Nothing failing</span> <span className="italic-accent">silently.</span>
           </h1>
           <p className="max-w-xs pb-2 text-[15px] leading-relaxed text-stone-500">
             One connected platform. From the first job to the next retry, every piece together.

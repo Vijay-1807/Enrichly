@@ -43,7 +43,7 @@ export function StatusBadge({ status }: { status?: string | null }) {
 export function SectionLabel({ index, title, aside }: { index: string; title: string; aside?: React.ReactNode }) {
   return (
     <div className="flex items-end justify-between">
-      <p className="eyebrow">{index} /&nbsp;&nbsp;{title}</p>
+      <p className="eyebrow"><span className="green-accent">{index}</span> /&nbsp;&nbsp;{title}</p>
       {aside}
     </div>
   );
