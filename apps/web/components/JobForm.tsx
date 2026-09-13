@@ -45,7 +45,7 @@ export function JobForm({ initial, submitLabel, onSubmit }: {
         intervalSeconds: v.scheduleMode === 'Interval' ? Number(v.intervalSeconds) : null,
         enabled: v.enabled, maxRetries: Number(v.maxRetries), timeoutSeconds: Number(v.timeoutSeconds),
         notificationUrl: v.notificationUrl || null, notifyOn: v.notifyOn,
-        ...(initial as any),
+        rowVersion: (initial as any)?.rowVersion || null,
       });
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }

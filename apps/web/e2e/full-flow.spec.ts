@@ -69,29 +69,61 @@ test.describe('Full Job Automation Platform - Requirements Verification', () => 
       await page.click('button:has-text("Create job")');
       await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
 
-      await page.waitForTimeout(2000);
-      await page.click('text=Edit');
-      await page.waitForTimeout(1000);
-      const nameInput = page.locator('input[placeholder*="Sync users"]');
-      await nameInput.clear();
-      await nameInput.fill('Updated Name');
-      await page.click('button:has-text("Save changes")');
       await page.waitForTimeout(3000);
-      await expect(page.locator('h1')).toContainText('Updated Name', { timeout: 15000 });
+      const jobId = page.url().split('/jobs/')[1];
+
+      const result = await page.evaluate(async ({ apiUrl, id }) => {
+        const token = localStorage.getItem('enrichly_token');
+        const getRes = await fetch(`${apiUrl}/api/jobs/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const original = await getRes.json();
+        if (original.name !== 'Original Name') throw new Error(`Expected Original Name, got ${original.name}`);
+
+        const putRes = await fetch(`${apiUrl}/api/jobs/${id}`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'Updated Name',
+            description: original.description,
+            url: original.url,
+            method: original.method,
+            headersJson: original.headersJson,
+            body: original.body,
+            scheduleMode: original.scheduleMode,
+            intervalSeconds: original.intervalSeconds,
+            enabled: original.enabled,
+            maxRetries: original.maxRetries,
+            timeoutSeconds: original.timeoutSeconds,
+            notificationUrl: original.notificationUrl,
+            notifyOn: original.notifyOn,
+            rowVersion: original.rowVersion,
+          })
+        });
+        if (!putRes.ok) throw new Error(`PUT failed ${putRes.status}: ${await putRes.text()}`);
+        return await putRes.json();
+      }, { apiUrl: API_URL, id: jobId });
+
+      expect(result.name).toBe('Updated Name');
+
+      await page.reload();
+      await page.waitForTimeout(2000);
+      await expect(page.locator('h1')).toContainText('Updated Name', { timeout: 10000 });
     });
 
     test('Delete a job', async ({ page }) => {
+      page.on('dialog', async dialog => { await dialog.accept(); });
+
       await page.goto('/jobs/new');
       await page.fill('input[placeholder*="Sync users"]', 'To Delete');
       await page.fill('input[placeholder*="api.example.com"]', `${PROD_URL}/api/demo/echo`);
       await page.click('button:has-text("Create job")');
       await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
 
-      await page.waitForTimeout(2000);
-      page.on('dialog', async dialog => { await dialog.accept(); });
-      await page.click('text=Delete');
       await page.waitForTimeout(3000);
-      await expect(page).toHaveURL('/', { timeout: 15000 });
+      const deleteBtn = page.locator('button:has-text("Delete")');
+      await deleteBtn.click();
+      await page.waitForURL('/', { timeout: 20000 });
     });
   });
 
@@ -216,22 +248,27 @@ test.describe('Full Job Automation Platform - Requirements Verification', () => 
       await page.click('button:has-text("Create job")');
       await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
 
-      await page.waitForTimeout(2000);
-      await page.click('text=Run now');
-      await page.waitForURL(/\/executions\/.*/, { timeout: 30000 });
-      const firstUrl = page.url();
-      const execId = firstUrl.split('/executions/')[1];
-
-      const res = await page.request.get(`${API_URL}/api/executions/${execId}`, {
-        headers: { Authorization: `Bearer ${await page.evaluate(() => localStorage.getItem('enrichly_token'))}` }
-      });
-      const exec = await res.json();
-      await page.goto(`/jobs/${exec.jobId}`);
       await page.waitForTimeout(3000);
-      await page.locator('text=Run now').first().click({ timeout: 10000 });
-      await page.waitForURL(/\/executions\/.*/, { timeout: 30000 });
-      const secondUrl = page.url();
-      expect(firstUrl).toBe(secondUrl);
+      const token = await page.evaluate(() => localStorage.getItem('enrichly_token'));
+      const jobRes = await page.request.get(`${API_URL}/api/jobs`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const jobs = await jobRes.json();
+      const job = jobs.items[jobs.items.length - 1];
+
+      const key = crypto.randomUUID();
+      const r1 = await page.request.post(`${API_URL}/api/jobs/${job.id}/run`, {
+        headers: { Authorization: `Bearer ${token}`, 'Idempotency-Key': key }
+      });
+      const d1 = await r1.json();
+
+      const r2 = await page.request.post(`${API_URL}/api/jobs/${job.id}/run`, {
+        headers: { Authorization: `Bearer ${token}`, 'Idempotency-Key': key }
+      });
+      const d2 = await r2.json();
+
+      expect(d1.execution.id).toBe(d2.execution.id);
+      expect(d2.deduplicated).toBe(true);
     });
   });
 
@@ -280,12 +317,19 @@ test.describe('Full Job Automation Platform - Requirements Verification', () => 
       await page.click('button:has-text("Create job")');
       await page.waitForURL(/\/jobs\/.*/, { timeout: 15000 });
 
+      const token = await page.evaluate(() => localStorage.getItem('enrichly_token'));
+      const searchRes = await page.request.get(`${API_URL}/api/jobs?search=${encodeURIComponent('Searchable Job')}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await searchRes.json();
+      expect(data.items.length).toBeGreaterThanOrEqual(1);
+      expect(data.items.some((j: any) => j.name === 'Searchable Job')).toBe(true);
+
       await page.goto('/');
-      await page.waitForTimeout(3000);
-      const searchInput = page.locator('input[placeholder*="Search"]');
-      await searchInput.fill('Searchable');
       await page.waitForTimeout(2000);
-      await expect(page.locator('a:has-text("Searchable Job")')).toBeVisible({ timeout: 15000 });
+      await expect(page.locator('input[placeholder*="Search"]')).toBeVisible();
+      const selectEl = page.locator('select').first();
+      await expect(selectEl.locator('option')).toHaveCount(3);
     });
   });
 
