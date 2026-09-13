@@ -14,4 +14,6 @@ obj/
 Thumbs.db
 coverage/
 TestResults/
+test-results/
+playwright-report/
 pgdata/
